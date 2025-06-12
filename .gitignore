@@ -1,6 +1,10 @@
 # Compiled class file
 *.class
 
+
+# Don't push
+backend/src/main/resources/application.yml
+
 # Log file
 *.log
 

@@ -30,4 +30,5 @@ public class User {
     private String passwordHash;
 
     private LocalDate createdAt;
+    private boolean isActive;
 }
