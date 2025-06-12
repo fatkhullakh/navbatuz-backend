@@ -18,10 +18,15 @@ import java.time.LocalDate;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final UserRepository userRepository; //  Interacts with your user database (save, find by email).
+    private final PasswordEncoder passwordEncoder; // Encrypts and verifies passwords.
+    private final JwtService jwtService; // Custom service that handles JWT token creation.
 
+    /*
+    Converts incoming request into a User object.
+    Uses passwordEncoder.encode() to hash the password (never store raw passwords).
+    Sets isActive = true.
+     */
     public AuthResponse register(RegisterRequest request) {
         User user = User.builder()
                 .name(request.getName())
@@ -31,11 +36,12 @@ public class AuthService {
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .isActive(true)
                 .build();
-        userRepository.save(user);
+        userRepository.save(user); //Saves the new user into the database.
 
-        String token = jwtService.generateToken(user.getEmail());
-        return new AuthResponse(token);
+        String token = jwtService.generateToken(user.getEmail()); //Generates a token based on user's email.
+        return new AuthResponse(token); // Returns it wrapped in an AuthResponse.
     }
+
 
     public AuthResponse login(LoginRequest request) {
         var user = userRepository.findByEmail(request.getEmail())

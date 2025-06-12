@@ -36,7 +36,15 @@ public class JwtService {
                 .signWith(getSignInKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+    /*
+    {
+      "sub": "fatkh@example.com",
+      "iat": 1718279200,
+      "exp": 1718365600
+    }
+     */
 
+    // Parses the token and returns the email stored inside.
     public String extractUsername(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSignInKey())
@@ -46,6 +54,7 @@ public class JwtService {
                 .getSubject(); /// this is the user's email we stored in token
     }
 
+    // Verifies if the token is correctly signed and not expired.
     public boolean isTokenValid(String token) {
         try {
             Jwts.parserBuilder()

@@ -1,8 +1,9 @@
 # Compiled class file
 *.class
 
-#
-!**/src/main/resources/application.yml
+
+# Don't push
+backend/src/main/resources/application.yml
 
 # Log file
 *.log

@@ -14,10 +14,28 @@ import uz.navbatuz.backend.auth.service.AuthService;
 public class AuthController {
     private final AuthService authService;
 
+
+
+    /*
+    POST /api/auth/register
+    {
+      "name": "Ali",
+      "surname": "Karimov",
+      "email": "ali@example.com",
+      "phoneNumber": "998901234567",
+      "password": "securePassword"
+    }
+     */
+
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest registerRequest) {
         return ResponseEntity.ok(authService.register(registerRequest));
     }
+
+    /*
+      "email": "ali@example.com",
+      "password": "securePassword"
+     */
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
