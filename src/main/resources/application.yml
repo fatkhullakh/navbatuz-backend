@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/navbatuz
     username: postgres
-    password: asdf
+    password: a
   jpa:
     hibernate:
       ddl-auto: update
