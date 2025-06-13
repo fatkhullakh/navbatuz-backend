@@ -1,4 +1,5 @@
 package uz.navbatuz.backend.auth.controller;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,9 +28,15 @@ public class AuthController {
     }
      */
 
+//    @PostMapping("/register")
+//    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest registerRequest) {
+//        return ResponseEntity.ok(authService.register(registerRequest));
+//    }
+
+
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest registerRequest) {
-        return ResponseEntity.ok(authService.register(registerRequest));
+    public ResponseEntity<?> register(@RequestBody @Valid RegisterRequest requestRequest) {
+        return ResponseEntity.ok(authService.register(requestRequest));
     }
 
     /*

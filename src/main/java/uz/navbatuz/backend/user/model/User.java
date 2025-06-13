@@ -22,11 +22,13 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
+    @Column(nullable = false, unique = true)
     private String phoneNumber;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
     private String passwordHash;
 
     private LocalDate createdAt;

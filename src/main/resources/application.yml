@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/navbatuz
+    username: postgres
+    password: Fatkh7267(?)
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+server:
+  port: 8080
+app:
+  jwt:
+    secret: 7267
+    expirationMs: 86400000 # 24 hours
+
