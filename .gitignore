@@ -1,9 +1,8 @@
 # Compiled class file
 *.class
 
-
-# Don't push
-backend/src/main/resources/application.yml
+# .gitignore
+application.yml
 
 # Log file
 *.log
