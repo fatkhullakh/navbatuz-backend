@@ -4,6 +4,8 @@
 # .gitignore
 application.yml
 
+#
+
 # Log file
 *.log
 
