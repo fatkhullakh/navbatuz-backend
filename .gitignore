@@ -2,9 +2,7 @@
 *.class
 
 # .gitignore
-application.yml
-
-#
+.env
 
 # Log file
 *.log
