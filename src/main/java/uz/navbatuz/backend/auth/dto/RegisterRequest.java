@@ -25,4 +25,7 @@ public class RegisterRequest {
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password too short")
     private String password;
+
+    @NotBlank(message = "ROLE")
+    private String role;
 }

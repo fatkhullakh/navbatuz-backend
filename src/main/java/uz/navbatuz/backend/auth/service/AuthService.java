@@ -8,59 +8,59 @@ import org.springframework.stereotype.Service;
 import uz.navbatuz.backend.auth.dto.AuthResponse;
 import uz.navbatuz.backend.auth.dto.LoginRequest;
 import uz.navbatuz.backend.auth.dto.RegisterRequest;
+import uz.navbatuz.backend.user.model.Role;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 import uz.navbatuz.backend.auth.service.JwtService;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    private final UserRepository userRepository; //  Interacts with your user database (save, find by email).
-    private final PasswordEncoder passwordEncoder; // Encrypts and verifies passwords.
-    private final JwtService jwtService; // Custom service that handles JWT token creation.
+    private final UserRepository userRepo;
+    private final PasswordEncoder encoder;
+    private final JwtService jwt;
 
-    /*
-    Converts incoming request into a User object.
-    Uses passwordEncoder.encode() to hash the password (never store raw passwords).
-    Sets isActive = true.
-     */
-    public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+    public AuthResponse register(RegisterRequest req) {
+        if (userRepo.existsByPhoneNumber(req.getPhoneNumber()))
+            throw new RuntimeException("Phone already in use");
+        if (userRepo.existsByEmail(req.getEmail()))
             throw new RuntimeException("Email already in use");
-        }
 
-        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new RuntimeException("Phone number already in use");
-        }
         User user = User.builder()
-                .name(request.getName())
-                .surname(request.getSurname())
-                .email(request.getEmail())
-                .phoneNumber(request.getPhoneNumber())
-                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .name(req.getName())
+                .surname(req.getSurname())
+                .email(req.getEmail())
+                .phoneNumber(req.getPhoneNumber())
+                .passwordHash(encoder.encode(req.getPassword()))
                 .isActive(true)
+                .role(Role.valueOf(req.getRole().toUpperCase()))
                 .build();
-        userRepository.save(user); //Saves the new user into the database.
 
-        String token = jwtService.generateToken(user.getEmail()); //Generates a token based on user's email.
-        return new AuthResponse(token); // Returns it wrapped in an AuthResponse.
+        userRepo.save(user);
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole().name());
+
+        return new AuthResponse(jwt.generateToken(claims, user, "24h"));
+
     }
 
+    public AuthResponse login(LoginRequest req) {
+        User user = userRepo.findByEmail(req.getEmail())
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid credentials"));
 
-    public AuthResponse login(LoginRequest request) {
-        var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new UsernameNotFoundException(request.getEmail()));
+        if (!encoder.matches(req.getPassword(), user.getPasswordHash()))
+            throw new BadCredentialsException("Invalid credentials");
 
-        if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Wrong password");
-        }
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole().name());
 
-        String token = jwtService.generateToken(user.getEmail());
-        return new AuthResponse(token);
+        return new AuthResponse(jwt.generateToken(claims, user, "24h"));
     }
-
 }
+
 
