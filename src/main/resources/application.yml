@@ -1,8 +1,12 @@
 spring:
+  config:
+    import: optional:env[.env]
+
   datasource:
-    url: jdbc:postgresql://localhost:5432/navbatuz
-    username: postgres
-    password: a
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -10,13 +14,21 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
   sql:
     init:
       mode: always
+
 server:
   port: 8080
+
+logging:
+  file:
+    name: logs/app.log
+  level:
+    root: INFO
+
 app:
   jwt:
     secret: 7267
-    expirationMs: 86400000 # 24 hours
-
+    expirationMs: 86400000

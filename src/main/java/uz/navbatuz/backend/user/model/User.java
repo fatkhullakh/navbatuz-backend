@@ -22,6 +22,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
+    @Column(unique = true, nullable = false)
     private String phoneNumber;
 
     @Column(unique = true, nullable = false)

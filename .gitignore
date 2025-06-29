@@ -1,8 +1,8 @@
 # Compiled class file
 *.class
 
-#
-!**/src/main/resources/application.yml
+# .gitignore
+.env
 
 # Log file
 *.log
@@ -57,4 +57,4 @@ build/
 !**/src/test/**/build/
 
 ### VS Code ###
-.vscode/
+.vscode/.
