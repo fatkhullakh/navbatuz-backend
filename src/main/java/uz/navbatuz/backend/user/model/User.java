@@ -2,6 +2,8 @@ package uz.navbatuz.backend.user.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import uz.navbatuz.backend.common.Language;
+
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -33,4 +35,5 @@ public class User {
 
     private LocalDate createdAt;
     private boolean isActive;
+    private Language language;
 }

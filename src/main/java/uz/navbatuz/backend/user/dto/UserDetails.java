@@ -1,20 +1,23 @@
-package uz.navbatuz.backend.auth.dto;
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.*;
+package uz.navbatuz.backend.user.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import uz.navbatuz.backend.common.Language;
 import uz.navbatuz.backend.user.model.Gender;
 
 import java.time.LocalDate;
 
 @Data
-public class RegisterRequest {
+@AllArgsConstructor
+@NoArgsConstructor
+public class UserDetails {
     private String name;
     private String surname;
-
     private LocalDate dateOfBirth;
     private Gender gender;
     private String phoneNumber;
     private String email;
-    private String password;
     private Language language;
 }
