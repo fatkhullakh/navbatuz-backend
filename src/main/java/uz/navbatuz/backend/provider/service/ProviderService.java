@@ -3,6 +3,7 @@ package uz.navbatuz.backend.provider.service;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.stereotype.Service;
 import uz.navbatuz.backend.provider.dto.ProviderRequest;
 import uz.navbatuz.backend.provider.dto.ProviderResponse;
@@ -11,6 +12,8 @@ import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
+import uz.navbatuz.backend.user.model.User;
+import uz.navbatuz.backend.user.repository.UserRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,8 +24,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProviderService {
     private final ProviderRepository providerRepository;
+    private final UserRepository userRepository;
 
     public Provider create(ProviderRequest request) {
+        User owner = userRepository.findById(request.getOwnerId())
+                .orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + request.getOwnerId()));
+
         if (providerRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("A provider with this email already exists.");
         }
@@ -38,6 +45,7 @@ public class ProviderService {
                 .teamSize(request.getTeamSize())
                 .isActive(true)
                 .avgRating(0f)
+                .owner(owner)
                 .build();
 
         return providerRepository.save(provider);

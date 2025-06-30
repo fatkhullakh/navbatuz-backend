@@ -2,6 +2,8 @@ package uz.navbatuz.backend.provider.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.util.UUID;
+
 
 @Data
 public class ProviderRequest {
@@ -24,5 +26,8 @@ public class ProviderRequest {
     @NotBlank(message = "Phone number is required")
     @Pattern(regexp = "^\\+?998\\d{9}$", message = "Phone must be valid Uzbekistan number")
     private String phoneNumber;
+
+    @NotNull(message = "Owner ID is required")
+    private UUID ownerId;
 
 }

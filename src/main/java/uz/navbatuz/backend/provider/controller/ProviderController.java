@@ -39,6 +39,17 @@ public class ProviderController {
         ));
     }
 
+//    {
+//        "name": "BarberPro",
+//            "description": "Best barbers in Tashkent",
+//            "category": "Barber",
+//            "teamSize": 5,
+//            "email": "barberproad@example.com",
+//            "phoneNumber": "+998901234522",
+//            "ownerId": "50017837-7163-452d-87a8-fc8ed8b88d46"
+//    }
+
+
     @GetMapping("/{id}")
     public ResponseEntity<ProvidersDetails> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(providerService.getById(id));

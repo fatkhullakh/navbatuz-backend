@@ -48,8 +48,9 @@ public class Provider {
     private float avgRating;
     boolean isActive;
 
-    @Column(nullable = false, updatable = false)
-    private UUID ownerId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", updatable = false)
+    private User owner;
 //
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "ownerId")

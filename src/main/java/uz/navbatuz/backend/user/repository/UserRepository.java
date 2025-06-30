@@ -13,6 +13,8 @@ import java.util.UUID;
 public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
 
+    Optional<User> findById(UUID id);
+
     //    boolean existsByEmail(@NotBlank(message = "Email is required") @Email(message = "Invalid email format") String email);
 //
 //    boolean existsByPhoneNumber(@NotBlank(message = "Phone number is required") @Pattern(regexp = "^\\+?998\\d{9}$", message = "Phone must be valid Uzbekistan number") String phoneNumber);
