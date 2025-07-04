@@ -6,11 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.user.dto.UserDetails;
-import uz.navbatuz.backend.user.dto.UserResponseForWorker;
-import uz.navbatuz.backend.user.model.User;
+import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
+import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 import uz.navbatuz.backend.user.service.UserService;
 
+import java.security.Principal;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,18 +23,18 @@ public class UserController {
     private final UserService userService;
 
     @RequestMapping
-    public ResponseEntity<List<UserDetails>> getAllActiveUsers() {
+    public ResponseEntity<List<UserDetailsDTO>> getAllActiveUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @RequestMapping("/{id}")
-    public ResponseEntity<UserDetails> getUserById(@PathVariable UUID id) {
+    public ResponseEntity<UserDetailsDTO> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @Transactional
     @PutMapping("/{id}")
-    public ResponseEntity<UserDetails> updateUserById(@PathVariable UUID id, @Valid @RequestBody UserDetails userDetails) {
+    public ResponseEntity<UserDetailsDTO> updateUserById(@PathVariable UUID id, @Valid @RequestBody UserDetailsDTO userDetails) {
         userService.updateUserById(id, userDetails);
         return ResponseEntity.ok(userService.getUserById(id));
     }
@@ -44,5 +44,12 @@ public class UserController {
         userService.deactivateUserById(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody ChangePasswordRequest request, Principal principal) {
+        userService.changePassword(principal.getName(), request);
+        return ResponseEntity.ok("Password updated successfully");
+    }
+
 
 }

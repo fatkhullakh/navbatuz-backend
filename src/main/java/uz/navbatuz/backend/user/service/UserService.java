@@ -3,26 +3,35 @@ package uz.navbatuz.backend.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import uz.navbatuz.backend.provider.dto.ProviderResponse;
-import uz.navbatuz.backend.provider.model.Provider;
-import uz.navbatuz.backend.user.dto.UserDetails;
+import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
+import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserService {
+public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public List<UserDetails> getAllUsers() {
+    @Override
+    public UserDetails loadUserByUsername(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+    }
+
+    public List<UserDetailsDTO> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(user -> new UserDetails(
+                .map(user -> new UserDetailsDTO(
                         user.getName(),
                         user.getSurname(),
                         user.getDateOfBirth(),
@@ -34,11 +43,11 @@ public class UserService {
                 .toList();
     }
 
-    public UserDetails getUserById(UUID id) {
+    public UserDetailsDTO getUserById(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return new UserDetails(
+        return new UserDetailsDTO(
                 user.getName(),
                 user.getSurname(),
                 user.getDateOfBirth(),
@@ -49,7 +58,7 @@ public class UserService {
         );
     }
 
-    public void updateUserById(UUID id, UserDetails request) {
+    public void updateUserById(UUID id, UserDetailsDTO request) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -81,6 +90,19 @@ public class UserService {
         user.setActive(false);
         userRepository.save(user);
     }
+
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
 
 
 }

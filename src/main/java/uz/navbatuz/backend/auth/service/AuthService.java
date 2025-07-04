@@ -15,6 +15,7 @@ import uz.navbatuz.backend.user.repository.UserRepository;
 import uz.navbatuz.backend.auth.service.JwtService;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 import static uz.navbatuz.backend.common.Language.RU;
@@ -33,6 +34,7 @@ public class AuthService {
         User user = User.builder()
                 .name(request.getName())
                 .surname(request.getSurname())
+                .createdAt(LocalDateTime.now())
                 .dateOfBirth(request.getDateOfBirth())
                 .gender(request.getGender())
                 .email(request.getEmail())
@@ -53,7 +55,7 @@ public class AuthService {
         String message = messageService.get("user.created.success", locale);
         System.out.println("Localized message: " + message);
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(user);
         return new AuthResponse(token);
     }
 
@@ -65,7 +67,7 @@ public class AuthService {
             throw new BadCredentialsException("Wrong password");
         }
 
-        String token = jwtService.generateToken(user.getEmail());
+        String token = jwtService.generateToken(user);
         return new AuthResponse(token);
     }
 

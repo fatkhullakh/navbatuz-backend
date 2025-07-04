@@ -20,14 +20,16 @@ public class AuthController {
     }
 
 //    {
-//            "email": "tfatkh@gmail.com",
-//            "gender": "MALE",
-//            "name": "Fatkhullakh",
-//            "password": "Fatkh7267(?)",
-//            "phoneNumber": "+998901560015",
+//        "name": "Fayzullakh",
 //            "surname": "Turakhonov",
-//            "role": "CUSTOMER"
+//            "dateOfBirth": "2006-03-26",
+//            "gender": "MALE",
+//            "phoneNumber": "+998998562588",
+//            "email": "888@gmail.com",
+//            "password": "Fayzi7267(?)",
+//            "language": "UZ"
 //    }
+
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
