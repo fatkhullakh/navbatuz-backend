@@ -103,6 +103,22 @@ public class UserService implements UserDetailsService {
         userRepository.save(user);
     }
 
+    public UserDetailsDTO getUserByEmail(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return new UserDetailsDTO(
+                user.getName(),
+                user.getSurname(),
+                user.getDateOfBirth(),
+                user.getGender(),
+                user.getPhoneNumber(),
+                user.getEmail(),
+                user.getLanguage()
+        );
+    }
+
+
 
 
 }
