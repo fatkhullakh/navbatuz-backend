@@ -32,11 +32,13 @@ public class User implements UserDetails {
     private Gender gender;
 
     @Column(unique = true, nullable = false)
+
     private String phoneNumber;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
 
+    @Column(nullable = false)
     private String passwordHash;
 
     private LocalDateTime createdAt;

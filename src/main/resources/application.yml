@@ -32,3 +32,4 @@ app:
   jwt:
     secret: 7267
     expirationMs: 86400000
+

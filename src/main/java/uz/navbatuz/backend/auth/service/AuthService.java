@@ -35,8 +35,21 @@ public class AuthService {
     private final MessageService messageService;
     private final CustomerRepository customerRepository;
 
+
+    /*
+    Converts incoming request into a User object.
+    Uses passwordEncoder.encode() to hash the password (never store raw passwords).
+    Sets isActive = true.
+     */
     public AuthResponse register(RegisterRequest request) {
-        // Step 1: Build and save the User
+        
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email already in use");
+        }
+
+        if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
+            throw new RuntimeException("Phone number already in use");
+        }
         User user = User.builder()
                 .name(request.getName())
                 .surname(request.getSurname())
@@ -73,6 +86,7 @@ public class AuthService {
         // Step 4: Return token
         String token = jwtService.generateToken(user);
         return new AuthResponse(token);
+
     }
 
 

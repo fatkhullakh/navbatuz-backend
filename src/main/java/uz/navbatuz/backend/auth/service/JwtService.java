@@ -33,7 +33,15 @@ public class JwtService {
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+    /*
+    {
+      "sub": "fatkh@example.com",
+      "iat": 1718279200,
+      "exp": 1718365600
+    }
+     */
 
+    // Parses the token and returns the email stored inside.
     public String extractUsername(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getKey())
@@ -52,6 +60,19 @@ public class JwtService {
                 .build().parseClaimsJws(token)
                 .getBody().getExpiration().before(new Date());
     }
+    // Verifies if the token is correctly signed and not expired.
+//     public boolean isTokenValid(String token) {
+//         try {
+//             Jwts.parserBuilder()
+//                     .setSigningKey(getSignInKey())
+//                     .build()
+//                     .parseClaimsJws(token);
+//             return true;
+//         }
+//         catch (Exception e) {
+//             return false;
+//         }
+//     }
 }
 //@Service
 //public class JwtService {
