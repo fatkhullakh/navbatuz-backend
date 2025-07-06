@@ -2,7 +2,16 @@ package uz.navbatuz.backend.user.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import uz.navbatuz.backend.common.Language;
+import uz.navbatuz.backend.common.Role;
+
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Table(name = "users")
@@ -10,10 +19,10 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class User {
+public class User implements UserDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    private UUID id;
 
     private String name;
     private String surname;
@@ -22,7 +31,8 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true, nullable = false)
+
     private String phoneNumber;
 
     @Column(nullable = false, unique = true)
@@ -31,6 +41,16 @@ public class User {
     @Column(nullable = false)
     private String passwordHash;
 
-    private LocalDate createdAt;
+    private LocalDateTime createdAt;
     private boolean isActive;
+    private Language language;
+    private Role role;
+
+    @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
+    @Override public String getUsername() { return email; }
+    @Override public String getPassword() { return passwordHash; }
+    @Override public boolean isAccountNonExpired()     { return true; }
+    @Override public boolean isAccountNonLocked()      { return true; }
+    @Override public boolean isCredentialsNonExpired() { return true; }
+    @Override public boolean isEnabled()               { return true; }
 }

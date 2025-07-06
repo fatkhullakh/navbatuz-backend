@@ -21,6 +21,8 @@ public class BackendApplication {
 		System.setProperty("JWT_SECRET_KEY", dotenv.get("JWT_SECRET_KEY"));
 
 		SpringApplication.run(BackendApplication.class, args);
+
 	}
+
 
 }

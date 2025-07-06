@@ -1,9 +1,9 @@
 package uz.navbatuz.backend.common;
 
 public enum Role {
+    ADMIN,
     CUSTOMER,
-    STAFF,
+    WORKER,
     OWNER,
-    RECEPTIONIST,
-    ADMIN
+    RECEPTIONIST
 }

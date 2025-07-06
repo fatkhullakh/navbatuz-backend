@@ -44,6 +44,18 @@ public class AuthController {
       "password": "securePassword"
      */
 
+//    {
+//        "name": "Fayzullakh",
+//            "surname": "Turakhonov",
+//            "dateOfBirth": "2006-03-26",
+//            "gender": "MALE",
+//            "phoneNumber": "+998998562588",
+//            "email": "888@gmail.com",
+//            "password": "Fayzi7267(?)",
+//            "language": "UZ"
+//    }
+
+
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(authService.login(loginRequest));
