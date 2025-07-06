@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import uz.navbatuz.backend.common.Language;
+import uz.navbatuz.backend.common.Role;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,6 +42,7 @@ public class User implements UserDetails {
     private LocalDateTime createdAt;
     private boolean isActive;
     private Language language;
+    private Role role;
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
     @Override public String getUsername() { return email; }

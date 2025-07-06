@@ -2,6 +2,7 @@ package uz.navbatuz.backend.auth.dto;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import uz.navbatuz.backend.common.Language;
+import uz.navbatuz.backend.common.Role;
 import uz.navbatuz.backend.user.model.Gender;
 
 import java.time.LocalDate;
@@ -18,4 +19,5 @@ public class RegisterRequest {
     private String email;
     private String password;
     private Language language;
+    private Role role;
 }
