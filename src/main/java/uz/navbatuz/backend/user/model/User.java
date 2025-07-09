@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+import uz.navbatuz.backend.common.Gender;
 import uz.navbatuz.backend.common.Language;
 import uz.navbatuz.backend.common.Role;
 

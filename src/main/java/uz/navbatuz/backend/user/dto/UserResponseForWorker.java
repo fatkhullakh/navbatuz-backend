@@ -1,7 +1,7 @@
 package uz.navbatuz.backend.user.dto;
 
 import lombok.Data;
-import uz.navbatuz.backend.user.model.Gender;
+import uz.navbatuz.backend.common.Gender;
 
 @Data
 public class UserResponseForWorker {

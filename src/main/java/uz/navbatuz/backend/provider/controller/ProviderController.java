@@ -48,6 +48,16 @@ public class ProviderController {
 //            "phoneNumber": "+998901234522",
 //            "ownerId": "50017837-7163-452d-87a8-fc8ed8b88d46"
 //    }
+//{
+//    "ownerId": "7e8afd33-b128-46bc-af5e-1ef2f963c7bb",
+//        "name": "Prestige Barber",
+//        "description": "Modern barbershop in the city center",
+//        "category": "BARBERSHOP",
+//        "email": "prestige@barber.uz",
+//        "phoneNumber": "+998991234567",
+//        "teamSize": 5
+//}
+
 
 
     @GetMapping("/{id}")

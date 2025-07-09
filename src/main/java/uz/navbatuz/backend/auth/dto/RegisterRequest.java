@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.*;
 import uz.navbatuz.backend.common.Language;
 import uz.navbatuz.backend.common.Role;
-import uz.navbatuz.backend.user.model.Gender;
+import uz.navbatuz.backend.common.Gender;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;

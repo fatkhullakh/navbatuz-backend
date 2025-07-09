@@ -74,6 +74,8 @@ public class AuthService {
             customerRepository.save(customer);
         }
 
+
+
         // Step 3: Localization
         Locale locale = switch (user.getLanguage()) {
             case UZ -> new Locale("uz");
