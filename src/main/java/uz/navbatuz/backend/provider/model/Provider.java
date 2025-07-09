@@ -2,6 +2,7 @@ package uz.navbatuz.backend.provider.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.user.model.User;
 
 import java.time.LocalDateTime;
@@ -22,7 +23,10 @@ public class Provider {
     private UUID id;
     private String name;
     private String description;
-    private String category;
+
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Category category;
     private int teamSize;
 
     @Column(unique = true, nullable = false)

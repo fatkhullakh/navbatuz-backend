@@ -1,6 +1,7 @@
 package uz.navbatuz.backend.provider.dto;
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import uz.navbatuz.backend.common.Category;
 
 import java.util.UUID;
 
@@ -13,8 +14,8 @@ public class ProviderRequest {
 
     private String description;
 
-    @NotBlank
-    private String category;
+    @NotNull(message = "Category is required")
+    private Category category;
 
     @NotNull
     private int teamSize;

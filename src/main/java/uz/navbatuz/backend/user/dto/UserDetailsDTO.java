@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import uz.navbatuz.backend.common.Language;
-import uz.navbatuz.backend.user.model.Gender;
+import uz.navbatuz.backend.common.Gender;
 
 import java.time.LocalDate;
 
