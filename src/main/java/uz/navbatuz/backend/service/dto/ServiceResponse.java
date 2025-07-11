@@ -13,7 +13,7 @@ public record ServiceResponse(
         BigDecimal price,
         Integer duration,
         Boolean isActive,
-        UUID providerName,
+        UUID providerId,
         UUID workerId
         //List<String> workerNames
 ) {}
