@@ -7,15 +7,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
-import uz.navbatuz.backend.provider.dto.ProviderRequest;
-import uz.navbatuz.backend.service.model.ServiceEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
+import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.service.service.ServiceService;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
+import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.model.Worker;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -23,7 +25,28 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @RequestMapping("/api/services")
 public class ServiceController {
+
     private final ServiceService serviceService;
+    private final ServiceRepository serviceRepository;
+
+//    {
+//        "name": "SPA - Men",
+//            "description": "Professional SPA for men with wash",
+//            "category": "SPA",
+//            "price": 35.00,
+//            "duration": 30,
+//            "providerId": "8af65e6f-1d6a-4027-ba94-490fddf922b1",
+//            "workerIds": [
+//        "50017837-7163-452d-87a8-fc8ed8b88d46",
+//                "bf7369f7-fca8-48e9-bbea-fad9e0cbde20"
+//  ]
+//    }
+
+
+    @PostMapping
+    public ResponseEntity<ServiceResponse> createService(@RequestBody CreateServiceRequest request) {
+        return ResponseEntity.ok(serviceService.createService(request));
+    }
 
     @GetMapping("/provider/{providerId}")
     public ResponseEntity<List<ServiceResponse>> getAllActiveByProvider(@PathVariable UUID providerId) {
@@ -35,11 +58,6 @@ public class ServiceController {
     public ResponseEntity<List<ServiceResponse>> getAllActiveByWorker(@PathVariable UUID workerId) {
         List<ServiceResponse> services = serviceService.getAllActiveServicesByWorker(workerId);
         return ResponseEntity.ok(services);
-    }
-
-    @PostMapping
-    public ResponseEntity<ServiceResponse> createService(@RequestBody CreateServiceRequest request) {
-        return ResponseEntity.ok(serviceService.createService(request));
     }
 
     @GetMapping("/{serviceId}")
@@ -77,6 +95,35 @@ public class ServiceController {
         return ResponseEntity.ok().build();
     }
 
+//    @PatchMapping("/{serviceId}/add-worker")
+//    public ResponseEntity<Void> addWorker(@PathVariable UUID serviceId, @RequestBody Worker worker) {
+//        serviceService.addWorkertoService(serviceId, worker);
+//        return ResponseEntity.ok().build();
+//    }
+
+//    @GetMapping("/{serviceId}/workers")
+//    public ResponseEntity<List<WorkerResponse>> getAllWorkers(@PathVariable UUID serviceId) {
+//        List<Worker> workers = serviceService.serviceProvidedByWorker(serviceId);
+//    }
+
+    @PutMapping("/{serviceId}/remove-worker/{workerId}")
+    public ResponseEntity<Void> removeWorkerFromService(@PathVariable UUID serviceId, @PathVariable UUID workerId) {
+        serviceService.removeWorkerFromService(serviceId, workerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/{serviceId}/add-worker/{workerId}")
+    public ResponseEntity<Void> addWorkerToService(@PathVariable UUID serviceId, @PathVariable UUID workerId) {
+        serviceService.addWorkerToService(serviceId, workerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{serviceId}/workers")
+    public ResponseEntity<List<WorkerResponseForService>> getWorkersByService(@PathVariable UUID serviceId) {
+        return ResponseEntity.ok(serviceService.getWorkersByServiceId(serviceId));
+    }
+
+
     @DeleteMapping("/{serviceId}")
     public ResponseEntity<Void> deleteService(@PathVariable UUID serviceId) {
         serviceService.deleteServiceById(serviceId);
@@ -112,10 +159,5 @@ public class ServiceController {
 
 
 
-
-
-
-    //
-    // Search/filter by category, price range, duration, etc.
-    // connect worker to service with many-to-many relationship
+    // also by service id we should be able to see workers offering this and manage it if needed
 }

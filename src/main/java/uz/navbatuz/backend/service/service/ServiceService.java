@@ -19,6 +19,7 @@ import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
+import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
 
@@ -31,13 +32,46 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class ServiceService {
+
     private final ServiceRepository serviceRepository;
     private final ProviderRepository providerRepository;
     private final WorkerRepository workerRepository;
 
-//    public List<ServiceEntity> getAllActiveServicesByProvider (UUID providerId) {
-//        return serviceRepository.findByProviderIdAndIsActiveTrue(providerId);
+//    @Transactional
+//    public ServiceResponse create(CreateServiceRequest request) {
+//        Provider provider = providerRepository.findById(request.providerId())
+//                .orElseThrow(() -> new RuntimeException("Provider not found"));
+//
+//        List<Worker> workers = workerRepository.findAllById(request.workerIds());
+//
+//        ServiceEntity service = ServiceEntity.builder()
+//                .name(request.name())
+//                .description(request.description())
+//                .category(request.category())
+//                .price(BigDecimal.valueOf(request.price()))
+//                .duration(request.duration())
+//                .isActive(true)
+//                .provider(provider)
+//                .workers(workers)
+//                .build();
+//
+//        ServiceEntity saved = serviceRepository.save(service);
+//        return mapToResponse(saved);
 //    }
+
+    private ServiceResponse mapToResponse(ServiceEntity service) {
+        return new ServiceResponse(
+                service.getId(),
+                service.getName(),
+                service.getDescription(),
+                service.getCategory(),
+                service.getPrice(),
+                service.getDuration(),
+                service.isActive(),
+                service.getProvider().getId(),
+                service.getWorkers().stream().map(Worker::getId).toList()
+        );
+    }
 
     public List<ServiceResponse> getAllActiveServicesByProvider(UUID providerId) {
         return serviceRepository.findByProviderIdAndIsActiveTrue(providerId)
@@ -74,21 +108,6 @@ public class ServiceService {
         return mapToResponse(serviceEntity);
     }
 
-
-    public ServiceResponse mapToResponse(ServiceEntity service) {
-        return new ServiceResponse(
-                service.getId(),
-                service.getName(),
-                service.getDescription(),
-                service.getCategory(),
-                service.getPrice(),
-                service.getDuration(),
-                service.isActive(),
-                service.getProvider().getId(),
-                service.getWorker().getId()
-        );
-    }
-
     @Transactional
     public ServiceResponse createService(CreateServiceRequest request) {
         Provider provider = providerRepository.findById(request.providerId())
@@ -103,9 +122,6 @@ public class ServiceService {
             throw new IllegalArgumentException("One or more workers do not belong to the specified provider.");
         }
 
-        // For now: just assign the service to the first worker (MVP level)
-        Worker worker = workers.get(0);
-
         ServiceEntity service = ServiceEntity.builder()
                 .name(request.name())
                 .description(request.description())
@@ -113,7 +129,7 @@ public class ServiceService {
                 .price(request.price() != null ? java.math.BigDecimal.valueOf(request.price()) : null)
                 .duration(request.duration())
                 .provider(provider)
-                .worker(worker)
+                .workers(workers)
                 .isActive(true)
                 .build();
 
@@ -147,14 +163,51 @@ public class ServiceService {
         ServiceEntity serviceEntity = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
+        List<Worker> workers = workerRepository.findAllById(request.workerIds());
+
         serviceEntity.setName(request.name());
         serviceEntity.setDescription(request.description());
         serviceEntity.setCategory(request.category());
         serviceEntity.setPrice(request.price());
         serviceEntity.setDuration(request.duration());
         serviceEntity.setActive(request.isActive());
+        serviceEntity.setWorkers(workers);
         serviceRepository.save(serviceEntity);
     }
+
+
+    @Transactional
+    public void addWorkerToService(UUID serviceId, UUID workerId) {
+        ServiceEntity service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        if(service.getWorkers().contains(worker)) {
+            throw new IllegalArgumentException("Worker already exists");
+        }
+
+        service.getWorkers().add(worker);
+        serviceRepository.save(service);
+    }
+
+    @Transactional
+    public void removeWorkerFromService(UUID serviceId, UUID workerId) {
+        ServiceEntity service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        if (!service.getWorkers().contains(worker)) {
+            throw new RuntimeException("Worker not assigned to this service");
+        }
+
+        service.getWorkers().remove(worker);
+        serviceRepository.save(service);
+    }
+
 
     public void deleteServiceById(UUID serviceId) {
         log.info("Start deleting service with id: {}", serviceId);
@@ -196,19 +249,21 @@ public class ServiceService {
 
 
 
-//    private ServiceResponse mapToResponse(ServiceEntity service) {
-//        return new ServiceResponse(
-//                service.getId(),
-//                service.getName(),
-//                service.getDescription(),
-//                service.getCategory(),
-//                service.getPrice(),
-//                service.getDuration(),
-//                service.isActive(),
-//                service.getProvider().getId(),
-//                service.getWorker().getId()
-//        );
-//    }
+    public List<WorkerResponseForService> getWorkersByServiceId(UUID serviceId) {
+        ServiceEntity service = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new RuntimeException("Service not found"));
+        return service.getWorkers()
+                .stream()
+                .map(this::mapToWorkerResponse)
+                .toList();
+    }
 
+    private WorkerResponseForService mapToWorkerResponse(Worker worker) {
+        return new WorkerResponseForService(
+                worker.getId(),
+                worker.getUser().getName(),
+                worker.getUser().getSurname()
+        );
+    }
 
 }

@@ -3,6 +3,7 @@ package uz.navbatuz.backend.service.dto;
 import uz.navbatuz.backend.common.Category;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 public record ServiceResponse(
@@ -11,10 +12,9 @@ public record ServiceResponse(
         String description,
         Category category,
         BigDecimal price,
-        Integer duration,
-        Boolean isActive,
+        int duration,
+        boolean isActive,
         UUID providerId,
-        UUID workerId
-        //List<String> workerNames
+        List<UUID> workerIds
 ) {}
 

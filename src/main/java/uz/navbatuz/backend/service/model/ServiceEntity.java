@@ -7,6 +7,7 @@ import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.worker.model.Worker;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -15,7 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "services")
+@Table(name = "service")
 public class ServiceEntity {
     @Id
     @GeneratedValue
@@ -32,11 +33,14 @@ public class ServiceEntity {
     private boolean isActive;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "worker_id", nullable = false)
-    private Worker worker;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "provider_id", nullable = false)
     private Provider provider;
 
+    @ManyToMany
+    @JoinTable(
+            name = "worker_services",
+            joinColumns = @JoinColumn(name = "service_id"),
+            inverseJoinColumns = @JoinColumn(name = "worker_id")
+    )
+    private List<Worker> workers;
 }

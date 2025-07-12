@@ -21,11 +21,13 @@ public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
     List<ServiceEntity> findByProviderIdAndIsActiveTrue(UUID providerId);
 
 
-    List<ServiceEntity> findByWorkerIdAndIsActiveTrue(UUID workerId);
+    @Query("SELECT s FROM ServiceEntity s JOIN s.workers w WHERE w.id = :workerId AND s.isActive = true")
+    List<ServiceEntity> findByWorkerIdAndIsActiveTrue(@Param("workerId") UUID workerId);
 
     List<ServiceEntity> findByProviderId(UUID providerId);
 
-    List<ServiceEntity> findByWorkerId(UUID workerId);
+    @Query("SELECT s FROM ServiceEntity s JOIN s.workers w WHERE w.id = :workerId")
+    List<ServiceEntity> findByWorkerId(@Param("workerId") UUID workerId);
 
     Page<ServiceEntity> findByCategoryAndIsActiveTrue(Category category, Pageable pageable);
 
@@ -45,7 +47,5 @@ public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
             @Param("maxPrice") BigDecimal maxPrice,
             Pageable pageable
     );
-
-
 
 }
