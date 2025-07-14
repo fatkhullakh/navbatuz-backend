@@ -5,9 +5,11 @@ import lombok.*;
 import uz.navbatuz.backend.common.Status;
 import uz.navbatuz.backend.common.WorkerType;
 import uz.navbatuz.backend.provider.model.Provider;
+import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.user.model.User;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 @Entity
 @Getter
@@ -38,4 +40,7 @@ public class Worker {
     private LocalDate terminationDate;
     private float avgRating;
     private boolean isActive;
+
+    @ManyToMany(mappedBy = "workers")
+    private List<ServiceEntity> services;
 }

@@ -19,3 +19,17 @@ public class CurrentUserService {
         return user.getId();
     }
 }
+
+//@Component
+//public class CurrentUserService {
+//    public UUID getCurrentUserId() {
+//        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+//        if (auth == null || !auth.isAuthenticated()) {
+//            throw new RuntimeException("Unauthorized");
+//        }
+//
+//        String userIdStr = (String) auth.getPrincipal();  // ✅ safely cast
+//        return UUID.fromString(userIdStr);                // ✅ convert to UUID
+//    }
+//}
+
