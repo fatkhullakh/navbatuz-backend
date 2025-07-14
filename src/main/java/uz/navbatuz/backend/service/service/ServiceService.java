@@ -15,11 +15,14 @@ import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
+import uz.navbatuz.backend.service.dto.ServiceSummaryResponse;
+import uz.navbatuz.backend.service.mapper.ServiceMapper;
 import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
 import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
 
@@ -36,6 +39,8 @@ public class ServiceService {
     private final ServiceRepository serviceRepository;
     private final ProviderRepository providerRepository;
     private final WorkerRepository workerRepository;
+    private final ServiceMapper serviceMapper;
+    private final WorkerMapper workerMapper;
 
 //    @Transactional
 //    public ServiceResponse create(CreateServiceRequest request) {
@@ -59,45 +64,32 @@ public class ServiceService {
 //        return mapToResponse(saved);
 //    }
 
-    private ServiceResponse mapToResponse(ServiceEntity service) {
-        return new ServiceResponse(
-                service.getId(),
-                service.getName(),
-                service.getDescription(),
-                service.getCategory(),
-                service.getPrice(),
-                service.getDuration(),
-                service.isActive(),
-                service.getProvider().getId(),
-                service.getWorkers().stream().map(Worker::getId).toList()
-        );
-    }
 
-    public List<ServiceResponse> getAllActiveServicesByProvider(UUID providerId) {
+    public List<ServiceSummaryResponse> getAllPublicServicesByProvider(UUID providerId) {
         return serviceRepository.findByProviderIdAndIsActiveTrue(providerId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(serviceMapper::toSummaryResponse)
                 .toList();
     }
 
     public List<ServiceResponse> getAllServicesByProvider(UUID providerId) {
         return serviceRepository.findByProviderId(providerId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(serviceMapper::toDetailedResponse)
                 .toList();
     }
 
-    public List<ServiceResponse> getAllActiveServicesByWorker(UUID workerId) {
+    public List<ServiceSummaryResponse> getAllPublicServicesByWorker(UUID workerId) {
         return serviceRepository.findByWorkerIdAndIsActiveTrue(workerId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(serviceMapper::toSummaryResponse)
                 .toList();
     }
 
     public List<ServiceResponse> getAllServicesByWorker(UUID workerId) {
         return serviceRepository.findByWorkerId(workerId)
                 .stream()
-                .map(this::mapToResponse)
+                .map(serviceMapper::toDetailedResponse)
                 .toList();
     }
 
@@ -105,7 +97,7 @@ public class ServiceService {
         ServiceEntity serviceEntity = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
-        return mapToResponse(serviceEntity);
+        return serviceMapper.toDetailedResponse(serviceEntity);
     }
 
     @Transactional
@@ -135,7 +127,7 @@ public class ServiceService {
 
         service = serviceRepository.save(service);
 
-        return mapToResponse(service); // return DTO
+        return serviceMapper.toDetailedResponse(service); // return DTO
     }
 
     @Transactional
@@ -229,7 +221,7 @@ public class ServiceService {
 //    }
 
 
-    public Page<ServiceResponse> searchServices(String category, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+    public Page<ServiceSummaryResponse> searchServices(String category, BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
         Category categoryEnum = null;
         if (category != null && !category.isBlank()) {
             try {
@@ -244,26 +236,23 @@ public class ServiceService {
         }
 
         Page<ServiceEntity> services = serviceRepository.searchByFilters(categoryEnum, minPrice, maxPrice, pageable);
-        return services.map(this::mapToResponse);
+        return services.map(serviceMapper::toSummaryResponse);
     }
-
-
 
     public List<WorkerResponseForService> getWorkersByServiceId(UUID serviceId) {
         ServiceEntity service = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
         return service.getWorkers()
                 .stream()
-                .map(this::mapToWorkerResponse)
+                .map(workerMapper::mapToWorkerResponse)
                 .toList();
     }
 
-    private WorkerResponseForService mapToWorkerResponse(Worker worker) {
-        return new WorkerResponseForService(
-                worker.getId(),
-                worker.getUser().getName(),
-                worker.getUser().getSurname()
-        );
+    public List<ServiceSummaryResponse> getPublicServicesByWorker(UUID workerId) {
+        return serviceRepository.findByWorkerIdAndIsActiveTrue(workerId)
+                .stream()
+                .map(serviceMapper::toSummaryResponse)
+                .toList();
     }
 
 }

@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
+import uz.navbatuz.backend.service.dto.ServiceSummaryResponse;
 import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.service.service.ServiceService;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
@@ -49,14 +50,14 @@ public class ServiceController {
     }
 
     @GetMapping("/provider/{providerId}")
-    public ResponseEntity<List<ServiceResponse>> getAllActiveByProvider(@PathVariable UUID providerId) {
-        List<ServiceResponse> services = serviceService.getAllActiveServicesByProvider(providerId);
+    public ResponseEntity<List<ServiceSummaryResponse>> getAllPublicServicesByProvider(@PathVariable UUID providerId) {
+        List<ServiceSummaryResponse> services = serviceService.getAllPublicServicesByProvider(providerId);
         return ResponseEntity.ok(services);
     }
 
     @GetMapping("/worker/{workerId}")
-    public ResponseEntity<List<ServiceResponse>> getAllActiveByWorker(@PathVariable UUID workerId) {
-        List<ServiceResponse> services = serviceService.getAllActiveServicesByWorker(workerId);
+    public ResponseEntity<List<ServiceSummaryResponse>> getAllActiveServicesByWorker(@PathVariable UUID workerId) {
+        List<ServiceSummaryResponse> services = serviceService.getAllPublicServicesByWorker(workerId);
         return ResponseEntity.ok(services);
     }
 
@@ -66,13 +67,13 @@ public class ServiceController {
     }
 
     @GetMapping("/provider/all/{providerId}")
-    public ResponseEntity<List<ServiceResponse>> getAllByProvider(@PathVariable UUID providerId) {
+    public ResponseEntity<List<ServiceResponse>> getAllServicesByProvider(@PathVariable UUID providerId) {
         List<ServiceResponse> services = serviceService.getAllServicesByProvider(providerId);
         return ResponseEntity.ok(services);
     }
 
     @GetMapping("/worker/all/{workerId}")
-    public ResponseEntity<List<ServiceResponse>> getAllByWorker(@PathVariable UUID workerId) {
+    public ResponseEntity<List<ServiceResponse>> getAllServicesByWorker(@PathVariable UUID workerId) {
         List<ServiceResponse> services = serviceService.getAllServicesByWorker(workerId);
         return ResponseEntity.ok(services);
     }
@@ -145,7 +146,7 @@ public class ServiceController {
     // localhost:8080/api/services/search?category=BARBERSHOP&minPrice=10&maxPrice=100&page=0&size=10
 
     @GetMapping("/search")
-    public ResponseEntity<Page<ServiceResponse>> searchServices(
+    public ResponseEntity<Page<ServiceSummaryResponse>> searchServices(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
@@ -153,10 +154,14 @@ public class ServiceController {
             @RequestParam(defaultValue = "10") int size
     ) {
         Pageable pageable = PageRequest.of(page, size);
-        Page<ServiceResponse> services = serviceService.searchServices(category, minPrice, maxPrice, pageable);
+        Page<ServiceSummaryResponse> services = serviceService.searchServices(category, minPrice, maxPrice, pageable);
         return ResponseEntity.ok(services);
     }
 
+    @GetMapping("/public/worker/{workerId}")
+    public ResponseEntity<List<ServiceSummaryResponse>> getVisibleServicesByWorker(@PathVariable UUID workerId) {
+        return ResponseEntity.ok(serviceService.getPublicServicesByWorker(workerId));
+    }
 
 
     // also by service id we should be able to see workers offering this and manage it if needed

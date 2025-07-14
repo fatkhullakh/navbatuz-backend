@@ -16,7 +16,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Table(name = "service")
+@Table(name = "services")
 public class ServiceEntity {
     @Id
     @GeneratedValue

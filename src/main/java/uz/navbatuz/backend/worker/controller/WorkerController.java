@@ -5,8 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.service.dto.ServiceResponse;
+import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.worker.dto.CreateWorkerRequest;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
+import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.service.WorkerService;
 
@@ -19,6 +22,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WorkerController {
     private final WorkerService workerService;
+    private final WorkerMapper workerMapper;
 
 //    @PostMapping
 //    public ResponseEntity<Worker> createWorker(@RequestBody UUID userId, @RequestBody UUID providerId) {
@@ -29,8 +33,7 @@ public class WorkerController {
     @PostMapping
     public ResponseEntity<WorkerResponse> createWorker(@RequestBody CreateWorkerRequest request) {
         Worker worker = workerService.createWorker(request);
-        // map to WorkerResponse or return directly depending on design
-        WorkerResponse response = workerService.mapToResponse(worker); // create helper if needed
+        WorkerResponse response = workerMapper.mapToResponse(worker);
         return ResponseEntity.ok(response);
     }
 
@@ -58,4 +61,5 @@ public class WorkerController {
         workerService.activateWorker(workerId);
         return ResponseEntity.ok().build();
     }
+
 }
