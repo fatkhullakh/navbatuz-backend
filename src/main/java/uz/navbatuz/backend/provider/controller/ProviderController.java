@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.provider.dto.ProviderRequest;
 import uz.navbatuz.backend.provider.dto.ProviderResponse;
@@ -29,7 +30,7 @@ public class ProviderController {
 
     private final ProviderService providerService;
 
-    @PostMapping("/register")
+    @PostMapping("/public/register")
     public ResponseEntity<ProviderResponse> create(@RequestBody @Valid ProviderRequest request) {
         Provider provider = providerService.create(request);  // If exception happens, global handler catches it
         return ResponseEntity.ok(new ProviderResponse(
@@ -81,6 +82,7 @@ public class ProviderController {
     }
 
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin")
     public ResponseEntity<List<ProviderResponse>> getAllProviders() {
         return ResponseEntity.ok(providerService.getAllProviders());

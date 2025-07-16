@@ -44,3 +44,7 @@ public class ServiceEntity {
     )
     private List<Worker> workers;
 }
+
+// TODO: FEATURE: Remove worker from service
+//  Customer view endpoints
+//  e.g. services by city, trending services, etc.
