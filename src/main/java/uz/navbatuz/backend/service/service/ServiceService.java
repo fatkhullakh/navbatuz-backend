@@ -66,6 +66,9 @@ public class ServiceService {
 
 
     public List<ServiceSummaryResponse> getAllPublicServicesByProvider(UUID providerId) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
+
         return serviceRepository.findByProviderIdAndIsActiveTrue(providerId)
                 .stream()
                 .map(serviceMapper::toSummaryResponse)
@@ -73,6 +76,9 @@ public class ServiceService {
     }
 
     public List<ServiceResponse> getAllServicesByProvider(UUID providerId) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
+
         return serviceRepository.findByProviderId(providerId)
                 .stream()
                 .map(serviceMapper::toDetailedResponse)
@@ -80,6 +86,9 @@ public class ServiceService {
     }
 
     public List<ServiceSummaryResponse> getAllPublicServicesByWorker(UUID workerId) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new IllegalArgumentException("Worker not found"));
+
         return serviceRepository.findByWorkerIdAndIsActiveTrue(workerId)
                 .stream()
                 .map(serviceMapper::toSummaryResponse)
@@ -87,6 +96,9 @@ public class ServiceService {
     }
 
     public List<ServiceResponse> getAllServicesByWorker(UUID workerId) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new IllegalArgumentException("Worker not found"));
+
         return serviceRepository.findByWorkerId(workerId)
                 .stream()
                 .map(serviceMapper::toDetailedResponse)
@@ -155,7 +167,17 @@ public class ServiceService {
         ServiceEntity serviceEntity = serviceRepository.findById(serviceId)
                 .orElseThrow(() -> new RuntimeException("Service not found"));
 
+        Provider provider = providerRepository.findById(request.providerId())
+                .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
+
         List<Worker> workers = workerRepository.findAllById(request.workerIds());
+
+        boolean allMatch = workers.stream()
+                .allMatch(w -> w.getProvider().getId().equals(provider.getId()));
+
+        if (!allMatch) {
+            throw new IllegalArgumentException("One or more workers do not belong to the specified provider.");
+        }
 
         serviceEntity.setName(request.name());
         serviceEntity.setDescription(request.description());

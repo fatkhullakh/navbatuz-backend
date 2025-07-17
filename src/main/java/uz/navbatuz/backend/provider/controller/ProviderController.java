@@ -10,7 +10,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.dto.ProviderRequest;
 import uz.navbatuz.backend.provider.dto.ProviderResponse;
 import uz.navbatuz.backend.provider.dto.ProvidersDetails;
@@ -29,7 +31,7 @@ public class ProviderController {
 
     private final ProviderService providerService;
 
-    @PostMapping("/register")
+    @PostMapping("/public/register")
     public ResponseEntity<ProviderResponse> create(@RequestBody @Valid ProviderRequest request) {
         Provider provider = providerService.create(request);  // If exception happens, global handler catches it
         return ResponseEntity.ok(new ProviderResponse(
@@ -59,8 +61,7 @@ public class ProviderController {
 //}
 
 
-
-    @GetMapping("/{id}")
+    @GetMapping("/public/{id}")
     public ResponseEntity<ProvidersDetails> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(providerService.getById(id));
     }
@@ -70,7 +71,7 @@ public class ProviderController {
 //        return ResponseEntity.ok(providerService.getAllActiveProviders());
 //    }
 
-    @GetMapping
+    @GetMapping("/public/all")
     public ResponseEntity<Page<ProviderResponse>> getAllActiveProviders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -81,11 +82,13 @@ public class ProviderController {
     }
 
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin")
     public ResponseEntity<List<ProviderResponse>> getAllProviders() {
         return ResponseEntity.ok(providerService.getAllProviders());
     }
 
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
     @Transactional
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable UUID id, @Valid @RequestBody ProviderRequest request) {
@@ -93,6 +96,7 @@ public class ProviderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
     @Transactional
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
@@ -100,9 +104,9 @@ public class ProviderController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/search")
+    @GetMapping("/public/search")
     public ResponseEntity<Page<ProviderResponse>> searchProviders(
-            @RequestParam String category,
+            @RequestParam Category category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -111,6 +115,8 @@ public class ProviderController {
                 providerService.searchByCategory(category, pageable)
         );
     }
+
+    // localhost:8080/api/providers/public/search?category=CLINIC&page=0&size=5
 
 
 }

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Pattern;
 import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.model.Provider;
 import org.springframework.data.domain.Pageable;
 
@@ -27,7 +28,7 @@ public interface ProviderRepository extends JpaRepository<Provider, UUID> {
 
     List<Provider> findAllByIsActiveTrue();
 
-    Page<Provider> findByCategoryIgnoreCaseAndIsActiveTrue(String category, Pageable pageable);
+    Page<Provider> findByCategoryAndIsActiveTrue(Category category, Pageable pageable);
 
     Page<Provider> findByIsActiveTrue(Pageable pageable);
 
