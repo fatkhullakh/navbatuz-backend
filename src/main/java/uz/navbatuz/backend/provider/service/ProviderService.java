@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.stereotype.Service;
+import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.dto.ProviderRequest;
 import uz.navbatuz.backend.provider.dto.ProviderResponse;
 import uz.navbatuz.backend.provider.dto.ProvidersDetails;
@@ -141,8 +142,8 @@ public class ProviderService {
 
 
 
-    public Page<ProviderResponse> searchByCategory(String category, Pageable pageable) {
-        return providerRepository.findByCategoryIgnoreCaseAndIsActiveTrue(category, pageable)
+    public Page<ProviderResponse> searchByCategory(Category category, Pageable pageable) {
+        return providerRepository.findByCategoryAndIsActiveTrue(category, pageable)
                 .map(p -> new ProviderResponse(p.getName(), p.getDescription(), p.getAvgRating()));
     }
 

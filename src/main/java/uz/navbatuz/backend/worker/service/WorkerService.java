@@ -8,22 +8,17 @@ import uz.navbatuz.backend.common.WorkerCategoryValidator;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.security.CurrentUserService;
-import uz.navbatuz.backend.service.dto.ServiceResponse;
-import uz.navbatuz.backend.service.model.ServiceEntity;
-import uz.navbatuz.backend.service.repository.ServiceRepository;
-import uz.navbatuz.backend.service.service.ServiceService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 import uz.navbatuz.backend.worker.dto.CreateWorkerRequest;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
+import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
 import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
 import uz.navbatuz.backend.common.Status;
-import uz.navbatuz.backend.common.WorkerType;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,7 +31,6 @@ public class WorkerService {
     private final UserRepository userRepository;
     private final ProviderRepository providerRepository;
     private final CurrentUserService currentUserService;
-    private final ServiceRepository serviceRepository;
     private final WorkerMapper workerMapper;
 
 
@@ -73,8 +67,18 @@ public class WorkerService {
     }
 
 
-    public List<WorkerResponse> getAllWorkerOfProvider(UUID providerId) {
+    public List<WorkerResponseForService> getAllActiveWorkersOfProvider(UUID providerId) {
         return workerRepository.findByProviderIdAndIsActiveTrue(providerId)
+                .stream()
+                .map(workerMapper::mapToWorkerResponse)
+                .toList();
+    }
+
+    public List<WorkerResponse> getAllWorkersOfProvider(UUID providerId) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new RuntimeException("Provider not found"));
+
+        return workerRepository.findByProviderId(providerId)
                 .stream()
                 .map(workerMapper::mapToResponse)
                 .toList();
@@ -113,7 +117,7 @@ public class WorkerService {
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
         if (!worker.getProvider().getOwner().getId().equals(currentUserId)) {
-            throw new RuntimeException("You are not allowed to activate this worker.");
+            throw new RuntimeException("You are not allowed to deactivate this worker.");
         }
 
         worker.setActive(false);
