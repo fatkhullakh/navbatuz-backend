@@ -1,4 +1,11 @@
 package uz.navbatuz.backend.provider.dto;
 
-public class BusinessHourResponse {
-}
+import java.time.LocalTime;
+import java.time.DayOfWeek;
+
+public record BusinessHourResponse(
+        Long id,
+        DayOfWeek day,
+        LocalTime startTime,
+        LocalTime endTime
+) {}
