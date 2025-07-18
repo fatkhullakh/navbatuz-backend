@@ -46,7 +46,7 @@ public class WorkerController {
 //            "workerType": "BARBER"
 //    }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
     @GetMapping("/provider/{providerId}")
     public ResponseEntity<List<WorkerResponse>> getAllWorkersOfProvider(@PathVariable UUID providerId) {
         List<WorkerResponse> workers = workerService.getAllWorkersOfProvider(providerId);

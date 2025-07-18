@@ -4,7 +4,6 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -13,14 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.common.Category;
-import uz.navbatuz.backend.provider.dto.ProviderRequest;
-import uz.navbatuz.backend.provider.dto.ProviderResponse;
-import uz.navbatuz.backend.provider.dto.ProvidersDetails;
+import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.service.ProviderService;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -115,6 +111,26 @@ public class ProviderController {
                 providerService.searchByCategory(category, pageable)
         );
     }
+
+    @GetMapping("/public/{providerId}/business-hours")
+    public ResponseEntity<List<BusinessHourResponse>> getBusinessHours(@PathVariable UUID providerId) {
+        return ResponseEntity.ok(providerService.getBusinessHours(providerId));
+    }
+
+    @PostMapping("/{providerId}/business-hours")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
+    public ResponseEntity<Void> setBusinessHours(@PathVariable UUID providerId, @RequestBody List<BusinessHourRequest> request) {
+        providerService.setBusinessHours(providerId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{providerId}/business-hours")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
+    public ResponseEntity<Void> updateBusinessHours(@PathVariable UUID providerId, @RequestBody List<BusinessHourRequest> request) {
+        providerService.updateBusinessHours(providerId, request);
+        return ResponseEntity.ok().build();
+    }
+
 
     // localhost:8080/api/providers/public/search?category=CLINIC&page=0&size=5
 

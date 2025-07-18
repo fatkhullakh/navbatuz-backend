@@ -1,23 +1,25 @@
 package uz.navbatuz.backend.provider.service;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.web.webauthn.management.UserCredentialRepository;
 import org.springframework.stereotype.Service;
 import uz.navbatuz.backend.common.Category;
-import uz.navbatuz.backend.provider.dto.ProviderRequest;
-import uz.navbatuz.backend.provider.dto.ProviderResponse;
-import uz.navbatuz.backend.provider.dto.ProvidersDetails;
+import uz.navbatuz.backend.provider.dto.*;
+import uz.navbatuz.backend.provider.model.BusinessHour;
 import uz.navbatuz.backend.provider.model.Provider;
+import uz.navbatuz.backend.provider.repository.BusinessHourRepository;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 
+import java.time.DayOfWeek;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class ProviderService {
     private final ProviderRepository providerRepository;
     private final UserRepository userRepository;
+    private final BusinessHourRepository businessHourRepository;
 
     public Provider create(ProviderRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -146,6 +149,83 @@ public class ProviderService {
         return providerRepository.findByCategoryAndIsActiveTrue(category, pageable)
                 .map(p -> new ProviderResponse(p.getName(), p.getDescription(), p.getAvgRating()));
     }
+
+    public void setBusinessHours(UUID providerId, List<BusinessHourRequest> requests) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+
+        businessHourRepository.deleteAll(businessHourRepository.findByProviderId(providerId));
+
+        Set<DayOfWeek> uniqueDays = new HashSet<>();
+        for (BusinessHourRequest req : requests) {
+            if (!req.isValid()) {
+                throw new IllegalArgumentException("Invalid time range for day: " + req.day());
+            }
+
+            if (!uniqueDays.add(req.day())) {
+                throw new IllegalArgumentException("Duplicate day: " + req.day());
+            }
+        }
+
+        List<BusinessHour> hours = requests.stream().map(req ->
+                BusinessHour.builder()
+                        .provider(provider)
+                        .day(req.day())
+                        .startTime(req.startTime())
+                        .endTime(req.endTime())
+                        .build()
+        ).toList();
+
+        businessHourRepository.saveAll(hours);
+    }
+
+    public List<BusinessHourResponse> getBusinessHours(UUID providerId) {
+        return businessHourRepository.findByProviderId(providerId).stream()
+                .map(hour -> new BusinessHourResponse(
+                        hour.getId(),
+                        hour.getDay(),
+                        hour.getStartTime(),
+                        hour.getEndTime()
+                ))
+                .toList();
+    }
+
+    @Transactional
+    public void updateBusinessHours(UUID providerId, List<BusinessHourRequest> requests) {
+        if (requests.size() > 7) {
+            throw new IllegalArgumentException("Cannot have more than 7 business hours.");
+        }
+
+        Set<DayOfWeek> uniqueDays = new HashSet<>();
+        for (BusinessHourRequest req : requests) {
+            if (!req.isValid()) {
+                throw new IllegalArgumentException("Invalid time range for day: " + req.day());
+            }
+
+            if (!uniqueDays.add(req.day())) {
+                throw new IllegalArgumentException("Duplicate day: " + req.day());
+            }
+        }
+
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+
+        businessHourRepository.deleteByProviderId(providerId);
+
+        List<BusinessHour> newHours = requests.stream()
+                .map(req -> BusinessHour.builder()
+                        .provider(provider)
+                        .day(req.day())
+                        .startTime(req.startTime())
+                        .endTime(req.endTime())
+                        .build()
+                )
+                .toList();
+
+        businessHourRepository.saveAll(newHours);
+    }
+
+
 
 
 }
