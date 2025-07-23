@@ -3,10 +3,20 @@ package uz.navbatuz.backend.worker.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import uz.navbatuz.backend.availability.dto.*;
+import uz.navbatuz.backend.availability.model.ActualAvailability;
+import uz.navbatuz.backend.availability.model.Break;
+import uz.navbatuz.backend.availability.model.PlannedAvailability;
+import uz.navbatuz.backend.availability.repository.ActualAvailabilityRepository;
+import uz.navbatuz.backend.availability.repository.BreakRepository;
+import uz.navbatuz.backend.availability.repository.PlannedAvailabilityRepository;
+import uz.navbatuz.backend.common.Role;
 import uz.navbatuz.backend.common.WorkerCategoryValidator;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
+import uz.navbatuz.backend.security.AuthorizationService;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
@@ -18,9 +28,12 @@ import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
 import uz.navbatuz.backend.common.Status;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -32,6 +45,10 @@ public class WorkerService {
     private final ProviderRepository providerRepository;
     private final CurrentUserService currentUserService;
     private final WorkerMapper workerMapper;
+    private final PlannedAvailabilityRepository plannedAvailabilityRepository;
+    private final ActualAvailabilityRepository actualAvailabilityRepository;
+    private final BreakRepository breakRepository;
+    private final AuthorizationService authorizationService;
 
 
     @Transactional
@@ -139,12 +156,154 @@ public class WorkerService {
         workerRepository.save(worker);
     }
 
+
 //    @Transactional
-//    public Worker updateWorker(UUID workerId, Worker worker) {
+//    public void setPlannedAvailability(UUID workerId, List<PlannedAvailabilityRequest> requests) {
 //        Worker worker = workerRepository.findById(workerId)
 //                .orElseThrow(() -> new RuntimeException("Worker not found"));
 //
+//        plannedAvailabilityRepository.deleteByWorkerId(workerId);
 //
+//        Set<DayOfWeek> seen = new HashSet<>();
+//        List<PlannedAvailability> entries = new ArrayList<>();
+//
+//        for (PlannedAvailabilityRequest req : requests) {
+//            if (!req.isValid())
+//                throw new IllegalArgumentException("Invalid range for " + req.day());
+//
+//            if (!seen.add(req.day()))
+//                throw new IllegalArgumentException("Duplicate day: " + req.day());
+//
+//            entries.add(PlannedAvailability.builder()
+//                    .worker(worker)
+//                    .day(req.day())
+//                    .startTime(req.startTime())
+//                    .endTime(req.endTime())
+//                    .bufferBetweenAppointments(req.bufferBetweenAppointments())
+//                    .build());
+//        }
+//
+//        plannedAvailabilityRepository.saveAll(entries);
 //    }
+
+    @Transactional
+    public void setBreak(UUID workerId, List<BreakRequest> requests) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
+
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new RuntimeException("Unauthorized access to modify worker");
+        }
+
+        breakRepository.deleteByWorkerIdAndDateIn(workerId, requests.stream().map(BreakRequest::date).toList());
+
+        List<Break> breaks = new ArrayList<>();
+        for (BreakRequest req : requests) {
+            if(!req.isValid())
+                throw new IllegalArgumentException("Invalid range: " + req.date());
+
+            breaks.add(Break.builder()
+                    .worker(worker)
+                    .date(req.date())
+                    .startTime(req.startTime())
+                    .endTime(req.endTime())
+                    .build());
+        }
+
+        breakRepository.saveAll(breaks);
+    }
+
+    public List<BreakResponse> getBreaks(UUID workerId, LocalDate from, LocalDate to) {
+        return breakRepository.findByWorkerIdAndDateBetween(workerId, from, to);
+    }
+
+    @Transactional
+    public void setActualAvailability(UUID workerId, List<ActualAvailabilityRequest> requests) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
+
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new RuntimeException("Unauthorized access to modify worker");
+        }
+
+        actualAvailabilityRepository.deleteByWorkerIdAndDateIn(workerId, requests.stream().map(ActualAvailabilityRequest::date).toList());
+
+        List<ActualAvailability> list = new ArrayList<>();
+        for (ActualAvailabilityRequest req : requests) {
+            if (!req.isValid())
+                throw new IllegalArgumentException("Invalid range: " + req.date());
+
+            list.add(ActualAvailability.builder()
+                    .worker(worker)
+                    .date(req.date())
+                    .startTime(req.startTime())
+                    .endTime(req.endTime())
+                    .build());
+        }
+        actualAvailabilityRepository.saveAll(list);
+    }
+
+    public List<ActualAvailabilityResponse> getActualAvailability(UUID workerId, LocalDate from, LocalDate to) {
+        return actualAvailabilityRepository.findByWorkerIdAndDateBetween(workerId, from, to);
+    }
+
+
+    @Transactional
+    public void setPlannedAvailability(UUID workerId, List<PlannedAvailabilityRequest> requests) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
+
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new RuntimeException("Unauthorized access to modify worker");
+        }
+
+        List<PlannedAvailability> existing = plannedAvailabilityRepository.findByWorkerId(workerId);
+
+        Map<DayOfWeek, PlannedAvailability> existingByDay = existing.stream()
+                .collect(Collectors.toMap(PlannedAvailability::getDay, Function.identity()));
+
+        Set<DayOfWeek> incomingDays = new HashSet<>();
+        List<PlannedAvailability> toSave = new ArrayList<>();
+
+        for (PlannedAvailabilityRequest req : requests) {
+            if (!req.isValid())
+                throw new IllegalArgumentException("Invalid time range for: " + req.day());
+
+            if (!incomingDays.add(req.day()))
+                throw new IllegalArgumentException("Duplicate day in request: " + req.day());
+
+            PlannedAvailability entry = existingByDay.getOrDefault(req.day(), new PlannedAvailability());
+
+            entry.setWorker(worker);
+            entry.setDay(req.day());
+            entry.setStartTime(req.startTime());
+            entry.setEndTime(req.endTime());
+            entry.setBufferBetweenAppointments(req.bufferBetweenAppointments());
+
+            toSave.add(entry);
+        }
+
+        plannedAvailabilityRepository.saveAll(toSave);
+
+        List<PlannedAvailability> toDelete = existing.stream()
+                .filter(pa -> !incomingDays.contains(pa.getDay()))
+                .toList();
+
+        plannedAvailabilityRepository.deleteAll(toDelete);
+    }
+
+
+    public List<PlannedAvailabilityResponse> getPlannedAvailability(UUID workerId) {
+        return plannedAvailabilityRepository.getByWorkerId(workerId);
+    }
+
+
+
 
 }

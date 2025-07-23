@@ -2,12 +2,12 @@ package uz.navbatuz.backend.worker.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.service.dto.ServiceResponse;
-import uz.navbatuz.backend.service.model.ServiceEntity;
+import uz.navbatuz.backend.availability.dto.*;
+import uz.navbatuz.backend.availability.model.Break;
+import uz.navbatuz.backend.availability.model.PlannedAvailability;
 import uz.navbatuz.backend.worker.dto.CreateWorkerRequest;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
 import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
@@ -15,6 +15,7 @@ import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.service.WorkerService;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -73,4 +74,43 @@ public class WorkerController {
         return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @PostMapping("/availability/planned/{workerId}")
+    public ResponseEntity<Void> setPlannedAvailability(@PathVariable UUID workerId, @RequestBody List<PlannedAvailabilityRequest> request) {
+        workerService.setPlannedAvailability(workerId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/public/availability/planned/{workerId}")
+    public ResponseEntity<List<PlannedAvailabilityResponse>> getPlannedAvailability(@PathVariable UUID workerId) {
+        return ResponseEntity.ok(workerService.getPlannedAvailability(workerId));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @PostMapping("/availability/actual/{workerId}")
+    public ResponseEntity<Void> setActualAvailability(@PathVariable UUID workerId, @RequestBody List<ActualAvailabilityRequest> request) {
+        workerService.setActualAvailability(workerId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/public/availability/actual/{workerId}")
+    public ResponseEntity<List<ActualAvailabilityResponse>> getActualAvailability(@PathVariable UUID workerId,
+                                                                                  @RequestParam LocalDate from,
+                                                                                  @RequestParam LocalDate to) {
+        return ResponseEntity.ok(workerService.getActualAvailability(workerId, from, to));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @PostMapping("/availability/break/{workerId}")
+    public ResponseEntity<Void> setBreaks(@PathVariable UUID workerId, @RequestBody List<BreakRequest> request) {
+        workerService.setBreak(workerId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/public/availability/break/{workerId}")
+    public ResponseEntity<List<BreakResponse>> getBreaks(@PathVariable UUID workerId,
+                                                 @RequestParam LocalDate from,
+                                                 @RequestParam LocalDate to) {
+        return ResponseEntity.ok(workerService.getBreaks(workerId, from, to));
+    }
 }
