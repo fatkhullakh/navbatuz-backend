@@ -6,6 +6,7 @@ import uz.navbatuz.backend.availability.model.ActualAvailability;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface ActualAvailabilityRepository extends JpaRepository<ActualAvailability, Long> {
@@ -15,4 +16,6 @@ public interface ActualAvailabilityRepository extends JpaRepository<ActualAvaila
     List<ActualAvailabilityResponse> getByWorkerId(UUID workerId);
 
     List<ActualAvailabilityResponse> findByWorkerIdAndDateBetween(UUID workerId, LocalDate from, LocalDate to);
+
+    Optional<ActualAvailability> findByWorkerIdAndDate(UUID workerId, LocalDate date);
 }

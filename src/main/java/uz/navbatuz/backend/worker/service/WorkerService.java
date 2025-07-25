@@ -3,8 +3,9 @@ package uz.navbatuz.backend.worker.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.availability.dto.*;
 import uz.navbatuz.backend.availability.model.ActualAvailability;
 import uz.navbatuz.backend.availability.model.Break;
@@ -12,7 +13,6 @@ import uz.navbatuz.backend.availability.model.PlannedAvailability;
 import uz.navbatuz.backend.availability.repository.ActualAvailabilityRepository;
 import uz.navbatuz.backend.availability.repository.BreakRepository;
 import uz.navbatuz.backend.availability.repository.PlannedAvailabilityRepository;
-import uz.navbatuz.backend.common.Role;
 import uz.navbatuz.backend.common.WorkerCategoryValidator;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
@@ -28,9 +28,7 @@ import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
 import uz.navbatuz.backend.common.Status;
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -92,9 +90,6 @@ public class WorkerService {
     }
 
     public List<WorkerResponse> getAllWorkersOfProvider(UUID providerId) {
-        Provider provider = providerRepository.findById(providerId)
-                .orElseThrow(() -> new RuntimeException("Provider not found"));
-
         return workerRepository.findByProviderId(providerId)
                 .stream()
                 .map(workerMapper::mapToResponse)
@@ -242,6 +237,7 @@ public class WorkerService {
                     .date(req.date())
                     .startTime(req.startTime())
                     .endTime(req.endTime())
+                    .bufferBetweenAppointments(req.bufferBetweenAppointments())
                     .build());
         }
         actualAvailabilityRepository.saveAll(list);
@@ -301,6 +297,61 @@ public class WorkerService {
 
     public List<PlannedAvailabilityResponse> getPlannedAvailability(UUID workerId) {
         return plannedAvailabilityRepository.getByWorkerId(workerId);
+    }
+
+    public List<LocalTime> getFreeSlots(UUID workerId, LocalDate date, Duration serviceDuration) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        Optional<ActualAvailability> actualAvailability = actualAvailabilityRepository.findByWorkerIdAndDate(workerId, date);
+
+        LocalTime start;
+        LocalTime end;
+        Duration buffer;
+
+        if (actualAvailability.isPresent()) {
+            ActualAvailability availability = actualAvailability.get();
+            start = availability.getStartTime();
+            end = availability.getEndTime();
+            buffer = availability.getBufferBetweenAppointments();
+        } else {
+            DayOfWeek day = date.getDayOfWeek();
+            PlannedAvailability planned = plannedAvailabilityRepository.findByWorkerIdAndDay(workerId, day);
+
+            if (planned == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "No planned availability for worker " + workerId + " on " + day
+                );
+            }
+
+            start = planned.getStartTime();
+            end = planned.getEndTime();
+            buffer = planned.getBufferBetweenAppointments();
+        }
+
+        List<Break> breaks = breakRepository.findByWorkerIdAndDate(workerId, date);
+
+        List<TimeRange> availableTimeRanges = List.of(new TimeRange(start,end));
+
+        for (Break b : breaks) {
+            List<TimeRange> updated = new ArrayList<>();
+            for (TimeRange range : availableTimeRanges) {
+                updated.addAll(range.subtract(b.getStartTime(), b.getEndTime()));
+            }
+            availableTimeRanges = updated;
+        }
+
+        List<LocalTime> slots = new ArrayList<>();
+        for (TimeRange range : availableTimeRanges) {
+            LocalTime current = range.start();
+            while (!current.plus(serviceDuration).isAfter(range.end())) {
+                slots.add(current);
+                current = current.plus(serviceDuration).plus(buffer);
+            }
+        }
+
+        return slots;
     }
 
 

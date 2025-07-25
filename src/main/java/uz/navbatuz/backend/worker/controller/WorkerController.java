@@ -2,6 +2,7 @@ package uz.navbatuz.backend.worker.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +16,9 @@ import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.service.WorkerService;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -112,5 +115,14 @@ public class WorkerController {
                                                  @RequestParam LocalDate from,
                                                  @RequestParam LocalDate to) {
         return ResponseEntity.ok(workerService.getBreaks(workerId, from, to));
+    }
+
+    @GetMapping("/free-slots/{workerId}")
+    public ResponseEntity<List<LocalTime>> getFreeSlots(
+            @PathVariable UUID workerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam int serviceDurationMinutes) {
+        Duration duration = Duration.ofMinutes(serviceDurationMinutes);
+        return ResponseEntity.ok(workerService.getFreeSlots(workerId, date, duration));
     }
 }

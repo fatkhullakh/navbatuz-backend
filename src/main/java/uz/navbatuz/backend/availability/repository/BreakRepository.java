@@ -12,4 +12,6 @@ public interface BreakRepository extends JpaRepository<Break, Integer> {
     void deleteByWorkerIdAndDateIn(UUID workerId, List<LocalDate> list);
 
     List<BreakResponse> findByWorkerIdAndDateBetween(UUID workerId, LocalDate from, LocalDate to);
+
+    List<Break> findByWorkerIdAndDate(UUID workerId, LocalDate date);
 }

@@ -2,6 +2,7 @@ package uz.navbatuz.backend.availability.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import uz.navbatuz.backend.common.DurationToMinutesConverter;
 import uz.navbatuz.backend.worker.model.Worker;
 
 import java.time.DayOfWeek;
@@ -34,6 +35,7 @@ public class ActualAvailability {
     @Column(nullable = false)
     private LocalTime endTime;
 
+    @Convert(converter = DurationToMinutesConverter.class)
     private Duration bufferBetweenAppointments;
 
     public boolean isValid() {
