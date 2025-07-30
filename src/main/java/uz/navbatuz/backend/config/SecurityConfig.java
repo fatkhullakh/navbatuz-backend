@@ -38,6 +38,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/providers/public/**").permitAll()
                         .requestMatchers("/api/providers/**").authenticated()
                         .requestMatchers("/api/services/public/**").permitAll()
+                        .requestMatchers("/api/appointments/**").permitAll()
 
                         .anyRequest().authenticated()
                 )
