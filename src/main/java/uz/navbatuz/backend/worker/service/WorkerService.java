@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import uz.navbatuz.backend.appointment.model.Appointment;
+import uz.navbatuz.backend.appointment.repository.AppointmentRepository;
 import uz.navbatuz.backend.availability.dto.*;
 import uz.navbatuz.backend.availability.model.ActualAvailability;
 import uz.navbatuz.backend.availability.model.Break;
@@ -47,6 +49,7 @@ public class WorkerService {
     private final ActualAvailabilityRepository actualAvailabilityRepository;
     private final BreakRepository breakRepository;
     private final AuthorizationService authorizationService;
+    private final AppointmentRepository appointmentRepository;
 
 
     @Transactional
@@ -303,7 +306,8 @@ public class WorkerService {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
-        Optional<ActualAvailability> actualAvailability = actualAvailabilityRepository.findByWorkerIdAndDate(workerId, date);
+        Optional<ActualAvailability> actualAvailability = actualAvailabilityRepository
+                .findByWorkerIdAndDate(workerId, date);
 
         LocalTime start;
         LocalTime end;
@@ -332,7 +336,7 @@ public class WorkerService {
 
         List<Break> breaks = breakRepository.findByWorkerIdAndDate(workerId, date);
 
-        List<TimeRange> availableTimeRanges = List.of(new TimeRange(start,end));
+        List<TimeRange> availableTimeRanges = List.of(new TimeRange(start, end));
 
         for (Break b : breaks) {
             List<TimeRange> updated = new ArrayList<>();
@@ -342,16 +346,34 @@ public class WorkerService {
             availableTimeRanges = updated;
         }
 
+        List<Appointment> bookedAppointments =
+                appointmentRepository.findByWorkerIdAndDate(workerId, date);
+
         List<LocalTime> slots = new ArrayList<>();
         for (TimeRange range : availableTimeRanges) {
             LocalTime current = range.start();
             while (!current.plus(serviceDuration).isAfter(range.end())) {
-                slots.add(current);
+
+                final LocalTime slotStart = current;
+
+                boolean isFree = bookedAppointments.stream()
+                        .noneMatch(app -> overlaps(slotStart, serviceDuration, app));
+
+                if (isFree) {
+                    slots.add(slotStart);
+                }
+
                 current = current.plus(serviceDuration).plus(buffer);
             }
         }
 
         return slots;
+    }
+
+    private boolean overlaps(LocalTime slotStart, Duration serviceDuration, Appointment appointment) {
+        LocalTime slotEnd = slotStart.plus(serviceDuration);
+        return slotStart.isBefore(appointment.getEndTime()) &&
+                slotEnd.isAfter(appointment.getStartTime());
     }
 
 

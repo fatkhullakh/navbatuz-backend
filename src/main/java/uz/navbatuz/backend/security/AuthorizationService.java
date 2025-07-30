@@ -1,9 +1,14 @@
 package uz.navbatuz.backend.security;
 
 import org.springframework.stereotype.Component;
+import uz.navbatuz.backend.appointment.model.Appointment;
+import uz.navbatuz.backend.appointment.service.AppointmentService;
 import uz.navbatuz.backend.common.Role;
 import uz.navbatuz.backend.user.model.User;
+import uz.navbatuz.backend.user.service.UserService;
 import uz.navbatuz.backend.worker.model.Worker;
+
+import java.util.UUID;
 
 @Component
 public class AuthorizationService {
@@ -16,4 +21,8 @@ public class AuthorizationService {
         if (role == Role.WORKER && worker.getUser().getId().equals(currentUser.getId())) return true;
         return false;
     }
+
+
+
+
 }

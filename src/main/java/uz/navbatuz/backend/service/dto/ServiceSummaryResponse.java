@@ -3,6 +3,7 @@ package uz.navbatuz.backend.service.dto;
 import uz.navbatuz.backend.common.Category;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.UUID;
 
 public record ServiceSummaryResponse(
@@ -10,5 +11,5 @@ public record ServiceSummaryResponse(
         String name,
         Category category,
         BigDecimal price,
-        Integer duration
+        Duration duration
 ) {}

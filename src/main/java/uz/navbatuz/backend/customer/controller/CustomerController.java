@@ -43,4 +43,5 @@ public class CustomerController {
     public ResponseEntity<List<UUID>> getFavouriteProviders(Authentication authentication) {
         return ResponseEntity.ok(customerService.getFavouriteProviders(authentication.getName()));
     }
+
 }
