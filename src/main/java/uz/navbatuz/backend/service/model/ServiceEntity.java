@@ -7,6 +7,7 @@ import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.worker.model.Worker;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public class ServiceEntity {
     private Category category;
 
     private BigDecimal price;
-    private int duration;
+    private Duration duration;
     private boolean isActive;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -44,3 +45,7 @@ public class ServiceEntity {
     )
     private List<Worker> workers;
 }
+
+// TODO: FEATURE: Remove worker from service
+//  Customer view endpoints
+//  e.g. services by city, trending services, etc.

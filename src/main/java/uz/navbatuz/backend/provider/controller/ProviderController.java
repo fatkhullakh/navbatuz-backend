@@ -4,21 +4,19 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.provider.dto.ProviderRequest;
-import uz.navbatuz.backend.provider.dto.ProviderResponse;
-import uz.navbatuz.backend.provider.dto.ProvidersDetails;
+import uz.navbatuz.backend.common.Category;
+import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.service.ProviderService;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -29,7 +27,7 @@ public class ProviderController {
 
     private final ProviderService providerService;
 
-    @PostMapping("/register")
+    @PostMapping("/public/register")
     public ResponseEntity<ProviderResponse> create(@RequestBody @Valid ProviderRequest request) {
         Provider provider = providerService.create(request);  // If exception happens, global handler catches it
         return ResponseEntity.ok(new ProviderResponse(
@@ -59,8 +57,7 @@ public class ProviderController {
 //}
 
 
-
-    @GetMapping("/{id}")
+    @GetMapping("/public/{id}")
     public ResponseEntity<ProvidersDetails> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(providerService.getById(id));
     }
@@ -70,7 +67,7 @@ public class ProviderController {
 //        return ResponseEntity.ok(providerService.getAllActiveProviders());
 //    }
 
-    @GetMapping
+    @GetMapping("/public/all")
     public ResponseEntity<Page<ProviderResponse>> getAllActiveProviders(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -81,11 +78,13 @@ public class ProviderController {
     }
 
 
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin")
     public ResponseEntity<List<ProviderResponse>> getAllProviders() {
         return ResponseEntity.ok(providerService.getAllProviders());
     }
 
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
     @Transactional
     @PutMapping("/{id}")
     public ResponseEntity<Void> update(@PathVariable UUID id, @Valid @RequestBody ProviderRequest request) {
@@ -93,6 +92,7 @@ public class ProviderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
     @Transactional
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
@@ -100,9 +100,9 @@ public class ProviderController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/search")
+    @GetMapping("/public/search")
     public ResponseEntity<Page<ProviderResponse>> searchProviders(
-            @RequestParam String category,
+            @RequestParam Category category,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -111,6 +111,28 @@ public class ProviderController {
                 providerService.searchByCategory(category, pageable)
         );
     }
+
+    @GetMapping("/public/{providerId}/business-hours")
+    public ResponseEntity<List<BusinessHourResponse>> getBusinessHours(@PathVariable UUID providerId) {
+        return ResponseEntity.ok(providerService.getBusinessHours(providerId));
+    }
+
+    @PostMapping("/{providerId}/business-hours")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
+    public ResponseEntity<Void> setBusinessHours(@PathVariable UUID providerId, @RequestBody List<BusinessHourRequest> request) {
+        providerService.setBusinessHours(providerId, request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{providerId}/business-hours")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
+    public ResponseEntity<Void> updateBusinessHours(@PathVariable UUID providerId, @RequestBody List<BusinessHourRequest> request) {
+        providerService.updateBusinessHours(providerId, request);
+        return ResponseEntity.ok().build();
+    }
+
+
+    // localhost:8080/api/providers/public/search?category=CLINIC&page=0&size=5
 
 
 }

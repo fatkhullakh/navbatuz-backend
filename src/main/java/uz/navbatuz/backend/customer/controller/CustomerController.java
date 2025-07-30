@@ -2,6 +2,7 @@ package uz.navbatuz.backend.customer.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +18,7 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("api/customers")
+@PreAuthorize("hasRole('CUSTOMER')")
 public class CustomerController {
     private final CustomerService customerService;
 
@@ -31,9 +33,9 @@ public class CustomerController {
         return ResponseEntity.ok().build();
     }
 
-    @DeleteMapping("/favourites/{shopId}")
-    public ResponseEntity<Void> removeFavouriteProvider(@PathVariable UUID shopId, Authentication authentication) {
-        customerService.removeFavouriteProvider(authentication.getName(), shopId);
+    @DeleteMapping("/favourites/{providerId}")
+    public ResponseEntity<Void> removeFavouriteProvider(@PathVariable UUID providerId, Authentication authentication) {
+        customerService.removeFavouriteProvider(authentication.getName(), providerId);
         return ResponseEntity.ok().build();
     }
 
@@ -41,4 +43,5 @@ public class CustomerController {
     public ResponseEntity<List<UUID>> getFavouriteProviders(Authentication authentication) {
         return ResponseEntity.ok(customerService.getFavouriteProviders(authentication.getName()));
     }
+
 }

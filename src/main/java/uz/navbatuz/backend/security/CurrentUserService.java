@@ -3,7 +3,9 @@ package uz.navbatuz.backend.security;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import uz.navbatuz.backend.common.Role;
 import uz.navbatuz.backend.user.model.User;
+import uz.navbatuz.backend.worker.model.Worker;
 
 import java.util.UUID;
 

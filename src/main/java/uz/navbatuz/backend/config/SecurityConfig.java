@@ -5,7 +5,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
@@ -14,6 +16,8 @@ import uz.navbatuz.backend.security.JwtAuthenticationFilter;
 
 
 @Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -27,9 +31,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/providers/register", "/api/customers/**").permitAll()
                         .requestMatchers("/api/users/me").authenticated()
-                        .requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/workers/**").authenticated()
-                        .requestMatchers("/api/services/**").permitAll()
+                        //.requestMatchers("/api/users/**").hasRole("ADMIN")
+                        .requestMatchers("/api/users/**").authenticated()
+                        /*.requestMatchers("/api/workers/**").authenticated()*/
+                        .requestMatchers("/api/workers/public/**").permitAll()
+                        .requestMatchers("/api/providers/public/**").permitAll()
+                        .requestMatchers("/api/providers/**").authenticated()
+                        .requestMatchers("/api/services/public/**").permitAll()
+                        .requestMatchers("/api/appointments/**").permitAll()
+
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)

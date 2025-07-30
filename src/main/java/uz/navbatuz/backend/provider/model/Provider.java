@@ -55,6 +55,11 @@ public class Provider {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", updatable = false)
     private User owner;
+
+    // TODO: Relationship Provider with Receptionist and hasReceptinist method
+//    public boolean hasReceptionist(User currentUser) {
+//
+//    }
 //
 //    @ManyToOne(fetch = FetchType.LAZY)
 //    @JoinColumn(name = "ownerId")
