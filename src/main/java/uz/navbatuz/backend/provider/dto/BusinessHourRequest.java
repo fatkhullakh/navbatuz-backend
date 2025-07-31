@@ -1,8 +1,7 @@
 package uz.navbatuz.backend.provider.dto;
 
-import java.time.LocalTime;
 import java.time.DayOfWeek;
-import java.util.UUID;
+import java.time.LocalTime;
 
 public record BusinessHourRequest(
         DayOfWeek day,
@@ -10,6 +9,6 @@ public record BusinessHourRequest(
         LocalTime endTime
 ) {
     public boolean isValid() {
-        return startTime != null && endTime != null && endTime.isAfter(startTime);
+        return startTime.isBefore(endTime);
     }
 }

@@ -5,22 +5,20 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import uz.navbatuz.backend.provider.repository.BusinessHourRepository;
 import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.BusinessHour;
 import uz.navbatuz.backend.provider.model.Provider;
-import uz.navbatuz.backend.provider.repository.BusinessHourRepository;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
+import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 
 import java.time.DayOfWeek;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -29,6 +27,7 @@ public class ProviderService {
     private final ProviderRepository providerRepository;
     private final UserRepository userRepository;
     private final BusinessHourRepository businessHourRepository;
+    private final CurrentUserService currentUserService;
 
     public Provider create(ProviderRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -150,33 +149,13 @@ public class ProviderService {
                 .map(p -> new ProviderResponse(p.getName(), p.getDescription(), p.getAvgRating()));
     }
 
-    public void setBusinessHours(UUID providerId, List<BusinessHourRequest> requests) {
-        Provider provider = providerRepository.findById(providerId)
-                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
-
-        businessHourRepository.deleteAll(businessHourRepository.findByProviderId(providerId));
-
-        Set<DayOfWeek> uniqueDays = new HashSet<>();
-        for (BusinessHourRequest req : requests) {
-            if (!req.isValid()) {
-                throw new IllegalArgumentException("Invalid time range for day: " + req.day());
-            }
-
-            if (!uniqueDays.add(req.day())) {
-                throw new IllegalArgumentException("Duplicate day: " + req.day());
-            }
-        }
-
-        List<BusinessHour> hours = requests.stream().map(req ->
-                BusinessHour.builder()
-                        .provider(provider)
-                        .day(req.day())
-                        .startTime(req.startTime())
-                        .endTime(req.endTime())
-                        .build()
-        ).toList();
-
-        businessHourRepository.saveAll(hours);
+    private BusinessHourResponse toResponse(BusinessHour bh) {
+        return new BusinessHourResponse(
+                bh.getId(),
+                bh.getDay(),
+                bh.getStartTime(),
+                bh.getEndTime()
+        );
     }
 
     public List<BusinessHourResponse> getBusinessHours(UUID providerId) {
@@ -225,7 +204,32 @@ public class ProviderService {
         businessHourRepository.saveAll(newHours);
     }
 
+    public List<BusinessHourResponse> listForProvider(UUID providerId) {
+        return businessHourRepository.findByProviderId(providerId)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
 
+    @Transactional
+    public void setBusinessHours(UUID providerId, List<BusinessHourRequest> requests) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new RuntimeException("Provider not found"));
+
+        businessHourRepository.findByProviderId(providerId)
+                .forEach(businessHourRepository::delete);
+
+        List<BusinessHour> hours = requests.stream()
+                .map(r -> BusinessHour.builder()
+                        .provider(provider)
+                        .day(r.day())
+                        .startTime(r.startTime())
+                        .endTime(r.endTime())
+                        .build())
+                .toList();
+
+        businessHourRepository.saveAll(hours);
+    }
 
 
 }

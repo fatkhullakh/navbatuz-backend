@@ -16,7 +16,9 @@ import uz.navbatuz.backend.availability.repository.ActualAvailabilityRepository;
 import uz.navbatuz.backend.availability.repository.BreakRepository;
 import uz.navbatuz.backend.availability.repository.PlannedAvailabilityRepository;
 import uz.navbatuz.backend.common.WorkerCategoryValidator;
+import uz.navbatuz.backend.provider.model.BusinessHour;
 import uz.navbatuz.backend.provider.model.Provider;
+import uz.navbatuz.backend.provider.repository.BusinessHourRepository;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.security.AuthorizationService;
 import uz.navbatuz.backend.security.CurrentUserService;
@@ -50,6 +52,7 @@ public class WorkerService {
     private final BreakRepository breakRepository;
     private final AuthorizationService authorizationService;
     private final AppointmentRepository appointmentRepository;
+    private final BusinessHourRepository businessHourRepository;
 
 
     @Transactional
@@ -306,6 +309,21 @@ public class WorkerService {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
+        // Get provider's business hours
+        DayOfWeek day = date.getDayOfWeek();
+        List<BusinessHour> businessHours = businessHourRepository.findByProviderId(worker.getProvider().getId());
+        BusinessHour dayHours = businessHours.stream()
+                .filter(b -> b.getDay() == day)
+                .findFirst()
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Provider closed on " + day
+                ));
+
+        LocalTime providerOpen = dayHours.getStartTime();
+        LocalTime providerClose = dayHours.getEndTime();
+
+        // Worker-specific availability
         Optional<ActualAvailability> actualAvailability = actualAvailabilityRepository
                 .findByWorkerIdAndDate(workerId, date);
 
@@ -319,7 +337,6 @@ public class WorkerService {
             end = availability.getEndTime();
             buffer = availability.getBufferBetweenAppointments();
         } else {
-            DayOfWeek day = date.getDayOfWeek();
             PlannedAvailability planned = plannedAvailabilityRepository.findByWorkerIdAndDay(workerId, day);
 
             if (planned == null) {
@@ -334,8 +351,19 @@ public class WorkerService {
             buffer = planned.getBufferBetweenAppointments();
         }
 
-        List<Break> breaks = breakRepository.findByWorkerIdAndDate(workerId, date);
+        // Enforce provider business hours: intersect worker hours with provider hours
+        if (start.isBefore(providerOpen)) {
+            start = providerOpen;
+        }
+        if (end.isAfter(providerClose)) {
+            end = providerClose;
+        }
+        if (!start.isBefore(end)) {
+            return List.of(); // no working hours after applying business hour limits
+        }
 
+        // Remove breaks
+        List<Break> breaks = breakRepository.findByWorkerIdAndDate(workerId, date);
         List<TimeRange> availableTimeRanges = List.of(new TimeRange(start, end));
 
         for (Break b : breaks) {
@@ -346,6 +374,7 @@ public class WorkerService {
             availableTimeRanges = updated;
         }
 
+        // Remove booked appointments
         List<Appointment> bookedAppointments =
                 appointmentRepository.findByWorkerIdAndDate(workerId, date);
 
@@ -353,22 +382,19 @@ public class WorkerService {
         for (TimeRange range : availableTimeRanges) {
             LocalTime current = range.start();
             while (!current.plus(serviceDuration).isAfter(range.end())) {
-
                 final LocalTime slotStart = current;
-
                 boolean isFree = bookedAppointments.stream()
                         .noneMatch(app -> overlaps(slotStart, serviceDuration, app));
-
                 if (isFree) {
                     slots.add(slotStart);
                 }
-
                 current = current.plus(serviceDuration).plus(buffer);
             }
         }
 
         return slots;
     }
+
 
     private boolean overlaps(LocalTime slotStart, Duration serviceDuration, Appointment appointment) {
         LocalTime slotEnd = slotStart.plus(serviceDuration);

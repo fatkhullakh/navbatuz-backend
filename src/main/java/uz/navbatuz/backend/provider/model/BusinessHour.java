@@ -10,9 +10,9 @@ import java.time.DayOfWeek;
 @Entity
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @Table(name = "business_hour")
 public class BusinessHour {
     @Id
@@ -20,12 +20,20 @@ public class BusinessHour {
     private Long id;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private DayOfWeek day;
 
+    @Column(nullable = false)
     private LocalTime startTime;
+
+    @Column(nullable = false)
     private LocalTime endTime;
 
-    @ManyToOne
-    @JoinColumn(name = "provider_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "provider_id", nullable = false)
     private Provider provider;
+
+    public boolean isValid() {
+        return startTime.isAfter(endTime);
+    }
 }
