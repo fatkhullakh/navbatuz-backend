@@ -4,7 +4,11 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import uz.navbatuz.backend.location.dto.LocationRequest;
+import uz.navbatuz.backend.location.dto.LocationResponse;
+import uz.navbatuz.backend.location.model.Location;
 import uz.navbatuz.backend.provider.repository.BusinessHourRepository;
 import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.dto.*;
@@ -229,6 +233,44 @@ public class ProviderService {
                 .toList();
 
         businessHourRepository.saveAll(hours);
+    }
+
+    @Transactional
+    public void updateLocation(UUID providerId, LocationRequest request) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+
+        Location location = provider.getLocation();
+        if (location == null) {
+            location = new Location();
+        }
+
+        location.setAddress(request.address());
+        location.setDistrict(request.district());
+        location.setCity(request.city());
+        location.setCountry(request.country());
+        location.setPostalCode(request.postalCode());
+        location.setLatitude(request.latitude());
+        location.setLongitude(request.longitude());
+
+        provider.setLocation(location);
+        providerRepository.save(provider);
+    }
+
+    public LocationResponse getLocation(UUID providerId) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+
+        return new LocationResponse(
+                provider.getLocation().getId(),
+                provider.getLocation().getAddress(),
+                provider.getLocation().getDistrict(),
+                provider.getLocation().getCity(),
+                provider.getLocation().getCountry(),
+                provider.getLocation().getPostalCode(),
+                provider.getLocation().getLatitude(),
+                provider.getLocation().getLongitude()
+        );
     }
 
 

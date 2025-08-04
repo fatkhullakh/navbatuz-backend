@@ -309,7 +309,6 @@ public class WorkerService {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
-        // Get provider's business hours
         DayOfWeek day = date.getDayOfWeek();
         List<BusinessHour> businessHours = businessHourRepository.findByProviderId(worker.getProvider().getId());
         BusinessHour dayHours = businessHours.stream()
@@ -323,7 +322,6 @@ public class WorkerService {
         LocalTime providerOpen = dayHours.getStartTime();
         LocalTime providerClose = dayHours.getEndTime();
 
-        // Worker-specific availability
         Optional<ActualAvailability> actualAvailability = actualAvailabilityRepository
                 .findByWorkerIdAndDate(workerId, date);
 
@@ -351,7 +349,6 @@ public class WorkerService {
             buffer = planned.getBufferBetweenAppointments();
         }
 
-        // Enforce provider business hours: intersect worker hours with provider hours
         if (start.isBefore(providerOpen)) {
             start = providerOpen;
         }
@@ -359,10 +356,9 @@ public class WorkerService {
             end = providerClose;
         }
         if (!start.isBefore(end)) {
-            return List.of(); // no working hours after applying business hour limits
+            return List.of();
         }
 
-        // Remove breaks
         List<Break> breaks = breakRepository.findByWorkerIdAndDate(workerId, date);
         List<TimeRange> availableTimeRanges = List.of(new TimeRange(start, end));
 
@@ -374,7 +370,6 @@ public class WorkerService {
             availableTimeRanges = updated;
         }
 
-        // Remove booked appointments
         List<Appointment> bookedAppointments =
                 appointmentRepository.findByWorkerIdAndDate(workerId, date);
 
@@ -395,14 +390,9 @@ public class WorkerService {
         return slots;
     }
 
-
     private boolean overlaps(LocalTime slotStart, Duration serviceDuration, Appointment appointment) {
         LocalTime slotEnd = slotStart.plus(serviceDuration);
         return slotStart.isBefore(appointment.getEndTime()) &&
                 slotEnd.isAfter(appointment.getStartTime());
     }
-
-
-
-
 }

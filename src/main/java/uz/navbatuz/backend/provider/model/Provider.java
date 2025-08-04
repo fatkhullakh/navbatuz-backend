@@ -3,6 +3,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import uz.navbatuz.backend.common.Category;
+import uz.navbatuz.backend.location.model.Location;
 import uz.navbatuz.backend.user.model.User;
 
 import java.time.LocalDateTime;
@@ -56,12 +57,12 @@ public class Provider {
     @JoinColumn(name = "owner_id", updatable = false)
     private User owner;
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "location_id")
+    private Location location;
+
     // TODO: Relationship Provider with Receptionist and hasReceptinist method
 //    public boolean hasReceptionist(User currentUser) {
 //
 //    }
-//
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "ownerId")
-//    private User owner;
 }

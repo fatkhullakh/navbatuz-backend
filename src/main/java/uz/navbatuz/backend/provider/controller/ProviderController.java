@@ -12,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.common.Category;
+import uz.navbatuz.backend.location.dto.LocationRequest;
+import uz.navbatuz.backend.location.dto.LocationResponse;
+import uz.navbatuz.backend.location.model.Location;
 import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.service.ProviderService;
@@ -129,6 +132,18 @@ public class ProviderController {
     public ResponseEntity<Void> updateBusinessHours(@PathVariable UUID providerId, @RequestBody List<BusinessHourRequest> request) {
         providerService.updateBusinessHours(providerId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
+    @PutMapping("/{providerId}/location")
+    public ResponseEntity<Void> updateLocation(@PathVariable UUID providerId, @RequestBody LocationRequest location) {
+        providerService.updateLocation(providerId, location);
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/public/{providerId}/location")
+    public ResponseEntity<LocationResponse> getLocation(@PathVariable UUID providerId) {
+        return ResponseEntity.ok(providerService.getLocation(providerId));
     }
 
 
