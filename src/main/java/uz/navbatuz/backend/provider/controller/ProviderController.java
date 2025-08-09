@@ -36,7 +36,8 @@ public class ProviderController {
         return ResponseEntity.ok(new ProviderResponse(
                 provider.getName(),
                 provider.getDescription(),
-                provider.getAvgRating()
+                provider.getAvgRating(),
+                provider.getLocation()
         ));
     }
 

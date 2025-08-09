@@ -115,7 +115,8 @@ public class ProviderService {
                 .map(provider -> new ProviderResponse(
                         provider.getName(),
                         provider.getDescription(),
-                        provider.getAvgRating()
+                        provider.getAvgRating(),
+                        provider.getLocation()
                 ));
     }
 
@@ -125,7 +126,8 @@ public class ProviderService {
                 .map(provider -> new ProviderResponse(
                         provider.getName(),
                         provider.getDescription(),
-                        provider.getAvgRating()
+                        provider.getAvgRating(),
+                        provider.getLocation()
                 ))
                 .toList();
     }
@@ -150,7 +152,7 @@ public class ProviderService {
 
     public Page<ProviderResponse> searchByCategory(Category category, Pageable pageable) {
         return providerRepository.findByCategoryAndIsActiveTrue(category, pageable)
-                .map(p -> new ProviderResponse(p.getName(), p.getDescription(), p.getAvgRating()));
+                .map(p -> new ProviderResponse(p.getName(), p.getDescription(), p.getAvgRating(), p.getLocation()));
     }
 
     private BusinessHourResponse toResponse(BusinessHour bh) {

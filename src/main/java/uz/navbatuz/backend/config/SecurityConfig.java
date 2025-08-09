@@ -14,6 +14,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import uz.navbatuz.backend.security.JwtAuthenticationFilter;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 
 @Configuration
 @EnableWebSecurity
@@ -29,7 +31,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/providers/register", "/api/customers/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/providers/register", "/api/customers/**", "api/auth/login").permitAll()
                         .requestMatchers("/api/users/me").authenticated()
                         //.requestMatchers("/api/users/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").authenticated()
