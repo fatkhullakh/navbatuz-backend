@@ -107,6 +107,7 @@ public class AuthService {
         return new AuthResponse(token);
     }
 
+    // for now just random number later have to implement sending code to email/number
     private String genCode6() {
         // 6-digit numeric, zero-padded
         int n = RNG.nextInt(1_000_000);
