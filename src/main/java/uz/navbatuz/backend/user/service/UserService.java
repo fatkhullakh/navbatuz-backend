@@ -32,13 +32,15 @@ public class UserService implements UserDetailsService {
     public List<UserDetailsDTO> getAllUsers() {
         return userRepository.findAll().stream()
                 .map(user -> new UserDetailsDTO(
+                        user.getId(),
                         user.getName(),
                         user.getSurname(),
                         user.getDateOfBirth(),
                         user.getGender(),
                         user.getPhoneNumber(),
                         user.getEmail(),
-                        user.getLanguage()
+                        user.getLanguage(),
+                        user.getCountry()
                 ))
                 .toList();
     }
@@ -48,40 +50,16 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return new UserDetailsDTO(
+                user.getId(),
                 user.getName(),
                 user.getSurname(),
                 user.getDateOfBirth(),
                 user.getGender(),
                 user.getPhoneNumber(),
                 user.getEmail(),
-                user.getLanguage()
+                user.getLanguage(),
+                user.getCountry()
         );
-    }
-
-    public void updateUserById(UUID id, UserDetailsDTO request) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        userRepository.findByEmail(request.getEmail()).ifPresent((User existing) -> {
-            if (!existing.getId().equals(id)) {
-                throw new IllegalArgumentException("A provider with this email already exists.");
-            }
-        });
-
-        userRepository.findByPhoneNumber(request.getPhoneNumber()).ifPresent((User existing) -> {
-            if (!existing.getId().equals(id)) {
-                throw new IllegalArgumentException("A provider with this phone number already exists.");
-            }
-        });
-
-        user.setName(request.getName());
-        user.setSurname(request.getSurname());
-        user.setDateOfBirth(request.getDateOfBirth());
-        user.setGender(request.getGender());
-        user.setPhoneNumber(request.getPhoneNumber());
-        user.setEmail(request.getEmail());
-        user.setLanguage(request.getLanguage());
-        userRepository.save(user);
     }
 
     public void deactivateUserById(UUID id) {
@@ -108,13 +86,15 @@ public class UserService implements UserDetailsService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         return new UserDetailsDTO(
+                user.getId(),
                 user.getName(),
                 user.getSurname(),
                 user.getDateOfBirth(),
                 user.getGender(),
                 user.getPhoneNumber(),
                 user.getEmail(),
-                user.getLanguage()
+                user.getLanguage(),
+                user.getCountry()
         );
     }
 
@@ -122,6 +102,72 @@ public class UserService implements UserDetailsService {
         User u = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
         return u.getId();
+    }
+
+    public UserDetailsDTO updateSettingsById(UUID id, UserDetailsDTO request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (request.getLanguage() != null) {
+            user.setLanguage(request.getLanguage());
+        }
+        if (request.getCountry() != null) {
+            user.setCountry(request.getCountry());
+        }
+
+        userRepository.save(user);
+
+        return new UserDetailsDTO(
+                user.getId(),
+                user.getName(),
+                user.getSurname(),
+                user.getDateOfBirth(),
+                user.getGender(),
+                user.getPhoneNumber(),
+                user.getEmail(),
+                user.getLanguage(),
+                user.getCountry()
+        );
+    }
+
+    // CHANGE PASSWORD BY UUID
+    public void changePasswordById(UUID id, ChangePasswordRequest request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new RuntimeException("Current password is incorrect");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+    }
+
+    // OPTIONAL: make sure updateUserById also updates country if provided
+    public void updateUserById(UUID id, UserDetailsDTO request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        userRepository.findByEmail(request.getEmail()).ifPresent((User existing) -> {
+            if (!existing.getId().equals(id)) {
+                throw new IllegalArgumentException("A user with this email already exists.");
+            }
+        });
+
+        userRepository.findByPhoneNumber(request.getPhoneNumber()).ifPresent((User existing) -> {
+            if (!existing.getId().equals(id)) {
+                throw new IllegalArgumentException("A user with this phone number already exists.");
+            }
+        });
+
+        user.setName(request.getName());
+        user.setSurname(request.getSurname());
+        user.setDateOfBirth(request.getDateOfBirth());
+        user.setGender(request.getGender());
+        user.setPhoneNumber(request.getPhoneNumber());
+        user.setEmail(request.getEmail());
+
+        userRepository.save(user);
     }
 
 }
