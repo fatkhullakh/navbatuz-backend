@@ -118,7 +118,10 @@ public class UserService implements UserDetailsService {
         );
     }
 
-
-
+    public UUID findIdByEmail(String email) {
+        User u = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+        return u.getId();
+    }
 
 }
