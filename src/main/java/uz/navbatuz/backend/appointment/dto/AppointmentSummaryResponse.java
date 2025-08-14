@@ -6,15 +6,15 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
-public record AppointmentResponse (
+public record AppointmentSummaryResponse(
         UUID id,
-        UUID workerId,
-        UUID serviceId,
-        UUID customerId,
-        UUID providerId,
         LocalDate date,
         LocalTime startTime,
         LocalTime endTime,
-        AppointmentStatus status
-){
+        AppointmentStatus status,
+
+        String workerName,
+        String providerName,
+        String serviceName
+) {
 }

@@ -19,7 +19,9 @@ import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.service.ProviderService;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -34,10 +36,12 @@ public class ProviderController {
     public ResponseEntity<ProviderResponse> create(@RequestBody @Valid ProviderRequest request) {
         Provider provider = providerService.create(request);  // If exception happens, global handler catches it
         return ResponseEntity.ok(new ProviderResponse(
+                provider.getId(),
                 provider.getName(),
                 provider.getDescription(),
                 provider.getAvgRating(),
-                provider.getLocation()
+                provider.getLocation(),
+                provider.getCategory()
         ));
     }
 
@@ -145,6 +149,13 @@ public class ProviderController {
     @GetMapping("/public/{providerId}/location")
     public ResponseEntity<LocationResponse> getLocation(@PathVariable UUID providerId) {
         return ResponseEntity.ok(providerService.getLocation(providerId));
+    }
+
+    @GetMapping
+    public List<Map<String,String>> list() {
+        return Arrays.stream(Category.values())
+                .map(c -> Map.of("id", c.name(), "name", c.name().replace("_"," ").toLowerCase()))
+                .toList();
     }
 
 

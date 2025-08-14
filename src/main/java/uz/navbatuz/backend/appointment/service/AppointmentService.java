@@ -7,6 +7,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import uz.navbatuz.backend.appointment.dto.AppointmentRequest;
 import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
+import uz.navbatuz.backend.appointment.dto.AppointmentSummaryResponse;
 import uz.navbatuz.backend.appointment.dto.RescheduleRequest;
 import uz.navbatuz.backend.appointment.model.Appointment;
 import uz.navbatuz.backend.appointment.model.AppointmentStatusHistory;
@@ -64,6 +65,7 @@ public class AppointmentService {
 //            case RECEPTIONIST -> appointment.getWorker().getProvider().getReceptionists()
 //                    .stream()
 //                    .anyMatch(r -> r.getUser().getId().equals(currentUser.getId()));
+            case ADMIN -> true;
             default -> false;
         };
     }
@@ -109,6 +111,7 @@ public class AppointmentService {
                 worker.getId(),
                 service.getId(),
                 appointment.getCustomer().getId(),
+                appointment.getWorker().getProvider().getId(),
                 appointment.getDate(),
                 appointment.getStartTime(),
                 appointment.getEndTime(),
@@ -166,6 +169,7 @@ public class AppointmentService {
                 worker.getId(),
                 service.getId(),
                 customer.getId(),
+                worker.getProvider().getId(),
                 appointment.getDate(),
                 appointment.getStartTime(),
                 appointment.getEndTime(),
@@ -199,6 +203,29 @@ public class AppointmentService {
                 .map(this::mapToResponse)
                 .toList();
     }
+
+    public List<AppointmentSummaryResponse> getCustomerAppointments1(UUID customerId) {
+        return appointmentRepository.findByCustomerId(customerId)
+                .stream()
+                .map(a -> new AppointmentSummaryResponse(
+                        a.getId(),
+                        a.getDate(),
+                        a.getStartTime(),
+                        a.getEndTime(),
+                        a.getStatus(),
+                        a.getWorker().getUser().getName(),
+                        a.getWorker().getProvider().getName(),
+                        a.getService().getName()
+                ))
+                .toList();
+    }
+
+//    public List<AppointmentResponse> getMyAppointments(UUID userId) {
+//        return appointmentRepository.findAllByCustomerOrWorker(userId)
+//                .stream()
+//                .map(this::mapToResponse)
+//                .toList();
+//    }
 
     @Transactional
     public void cancelAppointment(UUID appointmentId) {
@@ -249,6 +276,7 @@ public class AppointmentService {
                 a.getWorker().getId(),
                 a.getService().getId(),
                 a.getCustomer().getId(),
+                a.getWorker().getProvider().getId(),
                 a.getDate(),
                 a.getStartTime(),
                 a.getEndTime(),

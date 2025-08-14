@@ -26,13 +26,15 @@ public class CustomerService {
                 .map(c -> {
                     User user = c.getUser();
                     return new UserDetailsDTO(
+                            user.getId(),
                             user.getName(),
                             user.getSurname(),
                             user.getDateOfBirth(),
                             user.getGender(),
                             user.getPhoneNumber(),
                             user.getEmail(),
-                            user.getLanguage()
+                            user.getLanguage(),
+                            user.getCountry()
                     );
                 })
                 .toList();

@@ -16,62 +16,45 @@ import java.util.Date;
 // (in memory or localStorage) and uses it to make future requests.
 // its like: “I am Fatkhullakh. Here’s my identity. Signed by the backend.”
 
-
 @Service
 public class JwtService {
-    private static final String SECRET = "12345678901234567890123456789012"; // 32+ chars
-    private static final long EXPIRATION = 1000 * 60 * 60 * 24; // 24h
+    private static final String SECRET = "12345678901234567890123456789012";
+    private static final long EXPIRATION = 1000L * 60 * 60 * 24;
 
-    private Key getKey() {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
-    }
+    private Key getKey() { return Keys.hmacShaKeyFor(SECRET.getBytes()); }
 
     public String generateToken(User user) {
         return Jwts.builder()
-                .setSubject(user.getEmail()) // Email used as username
-                .claim("role", user.getRole().name()) // Embed the role
+                .setSubject(user.getId().toString())               // sub = UUID
+                .claim("email", user.getEmail())                   // email as claim
+                .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
                 .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
+    public String extractSubject(String token) {
+        return Jwts.parserBuilder().setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody().getSubject();
+    }
+
+    public String extractEmail(String token) {
+        return Jwts.parserBuilder().setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody().get("email", String.class);
+    }
+
     public String extractRole(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .get("role", String.class);
+        return Jwts.parserBuilder().setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody().get("role", String.class);
     }
 
-    /*
-    {
-      "sub": "fatkh@example.com",
-      "iat": 1718279200,
-      "exp": 1718365600
+    public boolean isExpired(String token) {
+        return Jwts.parserBuilder().setSigningKey(getKey()).build()
+                .parseClaimsJws(token).getBody().getExpiration().before(new Date());
     }
-     */
+}
 
-    // Parses the token and returns the email stored inside.
-    public String extractUsername(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
-    }
-
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        return extractUsername(token).equals(userDetails.getUsername()) && !isExpired(token);
-    }
-
-    private boolean isExpired(String token) {
-        return Jwts.parserBuilder().setSigningKey(getKey())
-                .build().parseClaimsJws(token)
-                .getBody().getExpiration().before(new Date());
-    }
     // Verifies if the token is correctly signed and not expired.
 //     public boolean isTokenValid(String token) {
 //         try {
@@ -85,7 +68,6 @@ public class JwtService {
 //             return false;
 //         }
 //     }
-}
 //@Service
 //public class JwtService {
 //    private static final String SECRET_KEY = "12345678901234567890123456789012"; // at least 32 characters
