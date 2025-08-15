@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.location.dto.LocationRequest;
 import uz.navbatuz.backend.location.dto.LocationResponse;
+import uz.navbatuz.backend.location.dto.LocationSummary;
 import uz.navbatuz.backend.location.model.Location;
 import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
@@ -32,16 +33,26 @@ public class ProviderController {
 
     private final ProviderService providerService;
 
+    private static LocationSummary toSummary(uz.navbatuz.backend.location.model.Location loc) {
+        if (loc == null) return null;
+        return new LocationSummary(
+                loc.getId(),
+                loc.getAddressLine1(),
+                loc.getCity(),
+                loc.getCountryIso2()
+        );
+    }
+
     @PostMapping("/public/register")
     public ResponseEntity<ProviderResponse> create(@RequestBody @Valid ProviderRequest request) {
-        Provider provider = providerService.create(request);  // If exception happens, global handler catches it
+        Provider p = providerService.create(request);
         return ResponseEntity.ok(new ProviderResponse(
-                provider.getId(),
-                provider.getName(),
-                provider.getDescription(),
-                provider.getAvgRating(),
-                provider.getLocation(),
-                provider.getCategory()
+                p.getId(),
+                p.getName(),
+                p.getDescription(),
+                p.getAvgRating(),
+                p.getCategory(),
+                toSummary(p.getLocation()) // <-- NULL-SAFE
         ));
     }
 
@@ -147,7 +158,12 @@ public class ProviderController {
     }
 
     @GetMapping("/public/{providerId}/location")
-    public ResponseEntity<LocationResponse> getLocation(@PathVariable UUID providerId) {
+    public ResponseEntity<LocationSummary> getLocationSummary(@PathVariable UUID providerId) {
+        return ResponseEntity.ok(providerService.getLocationSummary(providerId));
+    }
+
+    @GetMapping("/admin/{providerId}/location")
+    public ResponseEntity<LocationResponse> getLocationDetails(@PathVariable UUID providerId) {
         return ResponseEntity.ok(providerService.getLocation(providerId));
     }
 
