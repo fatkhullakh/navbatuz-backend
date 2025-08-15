@@ -36,13 +36,18 @@ public class ServiceController {
 //            "description": "Professional SPA for men with wash",
 //            "category": "SPA",
 //            "price": 35.00,
-//            "duration": 30,
+//            "duration": PT30M,
 //            "providerId": "8af65e6f-1d6a-4027-ba94-490fddf922b1",
 //            "workerIds": [
 //                "50017837-7163-452d-87a8-fc8ed8b88d46",
 //                "bf7369f7-fca8-48e9-bbea-fad9e0cbde20"
 //  ]
 //    }
+//    "PT30M" → 30 minutes
+//
+//    "PT1H" → 1 hour
+//
+//    "PT1H30M" → 1 hour 30 minutes
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
     @PostMapping

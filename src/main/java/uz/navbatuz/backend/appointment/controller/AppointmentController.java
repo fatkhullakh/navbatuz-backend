@@ -6,10 +6,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.appointment.dto.AppointmentRequest;
-import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
-import uz.navbatuz.backend.appointment.dto.AppointmentSummaryResponse;
-import uz.navbatuz.backend.appointment.dto.RescheduleRequest;
+import uz.navbatuz.backend.appointment.dto.*;
 import uz.navbatuz.backend.appointment.service.AppointmentService;
 import uz.navbatuz.backend.user.service.UserService;
 
@@ -47,8 +44,8 @@ public class AppointmentController {
     }
 
     @GetMapping("/{appointmentId}")
-    public ResponseEntity<AppointmentResponse> getAppointment(@PathVariable UUID appointmentId) {
-        return ResponseEntity.ok(appointmentService.getAppointment(appointmentId));
+    public ResponseEntity<AppointmentDetails> getAppointmentDetails(@PathVariable UUID appointmentId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentDetails(appointmentId));
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")
