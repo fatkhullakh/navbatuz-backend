@@ -3,12 +3,10 @@ package uz.navbatuz.backend.appointment.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import uz.navbatuz.backend.appointment.dto.AppointmentRequest;
-import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
-import uz.navbatuz.backend.appointment.dto.AppointmentSummaryResponse;
-import uz.navbatuz.backend.appointment.dto.RescheduleRequest;
+import uz.navbatuz.backend.appointment.dto.*;
 import uz.navbatuz.backend.appointment.model.Appointment;
 import uz.navbatuz.backend.appointment.model.AppointmentStatusHistory;
 import uz.navbatuz.backend.appointment.repository.AppointmentRepository;
@@ -195,6 +193,24 @@ public class AppointmentService {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
         return mapToResponse(appointment);
+    }
+
+    public AppointmentDetails getAppointmentDetails(UUID appointmentId) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+        
+        return new AppointmentDetails(
+                        a.getId(),
+                        a.getDate(),
+                        a.getStartTime(),
+                        a.getEndTime(),
+                        a.getStatus(),
+                        a.getWorker().getProvider().getName(),
+                        a.getWorker().getProvider().getLocation(),
+                        a.getService().getName(),
+                        a.getService().getPrice(),
+                        a.getWorker().getUser().getName()
+        );
     }
 
     public List<AppointmentResponse> getCustomerAppointments(UUID customerId) {
