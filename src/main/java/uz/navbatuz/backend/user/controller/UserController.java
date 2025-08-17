@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
+import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 import uz.navbatuz.backend.user.service.UserService;
 
@@ -77,9 +78,11 @@ public class UserController {
     @PutMapping("/{id}/settings")
     public ResponseEntity<UserDetailsDTO> updateSettingsById(
             @PathVariable UUID id,
-            @Valid @RequestBody UserDetailsDTO req) {
+            @RequestBody SettingsUpdateRequest req
+    ) {
         return ResponseEntity.ok(userService.updateSettingsById(id, req));
     }
+
 
     // CHANGE PASSWORD VIA UUID
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")

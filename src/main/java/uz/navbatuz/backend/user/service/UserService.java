@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
+import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
@@ -104,17 +105,16 @@ public class UserService implements UserDetailsService {
         return u.getId();
     }
 
-    public UserDetailsDTO updateSettingsById(UUID id, UserDetailsDTO request) {
-        User user = userRepository.findById(id)
+    public UserDetailsDTO updateSettingsById(UUID id, SettingsUpdateRequest req) {
+        var user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if (request.getLanguage() != null) {
-            user.setLanguage(request.getLanguage());
+        if (req.getLanguage() != null) {
+            user.setLanguage(req.getLanguage()); // enum
         }
-        if (request.getCountry() != null) {
-            user.setCountry(request.getCountry());
+        if (req.getCountry() != null && !req.getCountry().isBlank()) {
+            user.setCountry(req.getCountry().trim().toUpperCase());
         }
-
         userRepository.save(user);
 
         return new UserDetailsDTO(
@@ -129,6 +129,7 @@ public class UserService implements UserDetailsService {
                 user.getCountry()
         );
     }
+
 
     // CHANGE PASSWORD BY UUID
     public void changePasswordById(UUID id, ChangePasswordRequest request) {

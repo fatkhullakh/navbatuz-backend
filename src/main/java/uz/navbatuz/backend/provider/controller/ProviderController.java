@@ -77,8 +77,13 @@ public class ProviderController {
 
 
     @GetMapping("/public/{id}")
-    public ResponseEntity<ProvidersDetails> getById(@PathVariable UUID id) {
+    public ResponseEntity<ProviderResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(providerService.getById(id));
+    }
+
+    @GetMapping("/public/{id}/details")
+    public ResponseEntity<ProvidersDetails> getProvidersDetails(@PathVariable UUID id) {
+        return ResponseEntity.ok(providerService.getProvidersDetails(id));
     }
 
 //    @GetMapping

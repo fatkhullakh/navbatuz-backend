@@ -2,15 +2,23 @@ package uz.navbatuz.backend.provider.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import uz.navbatuz.backend.common.Category;
+import uz.navbatuz.backend.location.dto.LocationSummary;
+import uz.navbatuz.backend.provider.model.BusinessHour;
+import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
 
-@Data
-@AllArgsConstructor
-public class ProvidersDetails {
-    private String name;
-    private String description;
-    private Category category;
-    private int teamSize;
-    private String email;
-    private String phone;
-    private float avgRating;
+import java.util.List;
+import java.util.UUID;
+
+public record ProvidersDetails(
+        UUID id,
+     String name,
+     String description,
+     Category category,
+     List<WorkerResponseForService> workers,
+     String email,
+     String phone,
+     float avgRating,
+     List<BusinessHourResponse> businessHours,
+        LocationSummary location
+) {
 }
