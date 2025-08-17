@@ -28,6 +28,14 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.book(request));
     }
 
+//    @PostMapping
+//    @PreAuthorize("hasRole('CUSTOMER')")
+//    public ResponseEntity<AppointmentDto> book(@RequestBody BookReq req, Authentication auth) {
+//        UUID customerId = customerService.requireCustomerIdByUsername(auth.getName());
+//        req.setCustomerId(customerId);
+//        return ResponseEntity.ok(appointmentService.book(req));
+//    }
+
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
     @GetMapping("/worker/{workerId}")
     public ResponseEntity<List<AppointmentResponse>> getWorkerAppointments(
