@@ -4,10 +4,14 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseEntity;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Service;
 import uz.navbatuz.backend.location.dto.LocationRequest;
 import uz.navbatuz.backend.location.dto.LocationResponse;
+import uz.navbatuz.backend.location.dto.LocationSummary;
 import uz.navbatuz.backend.location.model.Location;
 import uz.navbatuz.backend.provider.repository.BusinessHourRepository;
 import uz.navbatuz.backend.common.Category;
@@ -20,6 +24,8 @@ import org.springframework.data.domain.Page;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
+import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.repository.WorkerRepository;
 
 import java.time.DayOfWeek;
 import java.util.*;
@@ -32,6 +38,7 @@ public class ProviderService {
     private final UserRepository userRepository;
     private final BusinessHourRepository businessHourRepository;
     private final CurrentUserService currentUserService;
+    private final WorkerRepository workerRepository;
 
     public Provider create(ProviderRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -58,19 +65,49 @@ public class ProviderService {
         return providerRepository.save(provider);
     }
 
+    private LocationSummary toSummary(uz.navbatuz.backend.location.model.Location loc) {
+        if (loc == null) return null;
+        return new LocationSummary(
+                loc.getId(),
+                loc.getAddressLine1(),
+                loc.getCity(),
+                loc.getCountryIso2()
+        );
+    }
 
-    public ProvidersDetails getById(UUID id) {
+    public ProviderResponse getById(UUID id) {
         Provider provider = providerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Provider not found"));
 
+        return new ProviderResponse(
+                provider.getId(),
+                provider.getName(),
+                provider.getDescription(),
+                provider.getAvgRating(),
+                provider.getCategory(),
+                toSummary(provider.getLocation())
+        );
+    }
+
+    public ProvidersDetails  getProvidersDetails(UUID id) {
+        Provider provider = providerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Provider not found"));
+
+
+        List<WorkerResponseForService> workers = workerRepository.findWorkerResponsesByProviderId(id); // Example
+        List<BusinessHourResponse> businessHours = businessHourRepository.findByProvider_Id(id);
+
         return new ProvidersDetails(
+                provider.getId(),
                 provider.getName(),
                 provider.getDescription(),
                 provider.getCategory(),
-                provider.getTeamSize(),
+                workers,
                 provider.getEmail(),
                 provider.getPhoneNumber(),
-                provider.getAvgRating()
+                provider.getAvgRating(),
+                businessHours,
+                toSummary(provider.getLocation())
         );
     }
 
@@ -110,27 +147,35 @@ public class ProviderService {
 //                ))
 //                .toList();
 //    }
+
+
+
+
     public Page<ProviderResponse> getAllActiveProviders(Pageable pageable) {
         return providerRepository.findByIsActiveTrue(pageable)
-                .map(provider -> new ProviderResponse(
-                        provider.getName(),
-                        provider.getDescription(),
-                        provider.getAvgRating(),
-                        provider.getLocation()
+                .map(p -> new ProviderResponse(
+                        p.getId(),
+                        p.getName(),
+                        p.getDescription(),
+                        p.getAvgRating(),
+                        p.getCategory(),
+                        toSummary(p.getLocation()) // <-- null-safe
                 ));
     }
 
-
     public List<ProviderResponse> getAllProviders() {
         return providerRepository.findAll().stream()
-                .map(provider -> new ProviderResponse(
-                        provider.getName(),
-                        provider.getDescription(),
-                        provider.getAvgRating(),
-                        provider.getLocation()
+                .map(p -> new ProviderResponse(
+                        p.getId(),
+                        p.getName(),
+                        p.getDescription(),
+                        p.getAvgRating(),
+                        p.getCategory(),
+                        toSummary(p.getLocation()) // <-- null-safe
                 ))
                 .toList();
     }
+
 
 
 //    public Provider findById(UUID id) {
@@ -148,11 +193,16 @@ public class ProviderService {
     }
 
 
-
-
     public Page<ProviderResponse> searchByCategory(Category category, Pageable pageable) {
         return providerRepository.findByCategoryAndIsActiveTrue(category, pageable)
-                .map(p -> new ProviderResponse(p.getName(), p.getDescription(), p.getAvgRating(), p.getLocation()));
+                .map(p -> new ProviderResponse(
+                        p.getId(),
+                        p.getName(),
+                        p.getDescription(),
+                        p.getAvgRating(),
+                        p.getCategory(),
+                        toSummary(p.getLocation()) // <-- null-safe
+                ));
     }
 
     private BusinessHourResponse toResponse(BusinessHour bh) {
@@ -237,43 +287,100 @@ public class ProviderService {
         businessHourRepository.saveAll(hours);
     }
 
+    private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
+
+    private static Point makePoint(Double lat, Double lng) {
+        if (lat == null || lng == null) throw new IllegalArgumentException("lat/lng required");
+        if (lat < -90 || lat > 90) throw new IllegalArgumentException("latitude out of range");
+        if (lng < -180 || lng > 180) throw new IllegalArgumentException("longitude out of range");
+        Point p = GEO_FACTORY.createPoint(new Coordinate(lng, lat)); // x=lng, y=lat
+        p.setSRID(4326);
+        return p;
+    }
+
+    private static String normIso2(String iso2) {
+        return iso2 == null ? null : iso2.trim().toUpperCase();
+    }
+
     @Transactional
-    public void updateLocation(UUID providerId, LocationRequest request) {
+    public void updateLocation(UUID providerId, LocationRequest req) {
         Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
 
-        Location location = provider.getLocation();
-        if (location == null) {
-            location = new Location();
+        Location loc = provider.getLocation();
+        if (loc == null) {
+            loc = new Location();
         }
 
-        location.setAddress(request.address());
-        location.setDistrict(request.district());
-        location.setCity(request.city());
-        location.setCountry(request.country());
-        location.setPostalCode(request.postalCode());
-        location.setLatitude(request.latitude());
-        location.setLongitude(request.longitude());
+        // set structured + free-form
+        loc.setAddressLine1(req.addressLine1());
+        loc.setAddressLine2(req.addressLine2());
+        loc.setDistrict(req.district());
+        loc.setCity(req.city());
+        loc.setCountryIso2(normIso2(req.countryIso2()));
+        loc.setPostalCode(req.postalCode());
 
-        provider.setLocation(location);
+        // set geo point (WGS84)
+        loc.setPoint(makePoint(req.latitude(), req.longitude()));
+
+        // optional external geocoder IDs
+        loc.setProvider(req.provider());
+        loc.setProviderPlaceId(req.providerPlaceId());
+
+        // activate by default on update
+        if (loc.getId() == null) {
+            loc.setActive(true);
+        }
+
+        // attach to provider (make sure Provider owns the relation)
+        provider.setLocation(loc);
         providerRepository.save(provider);
     }
+
 
     public LocationResponse getLocation(UUID providerId) {
         Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
 
+        Location loc = provider.getLocation();
+        if (loc == null) {
+            throw new EntityNotFoundException("Location not set for provider");
+        }
+
+        Double lat = null, lng = null;
+        if (loc.getPoint() != null) {
+            lat = loc.getPoint().getY(); // y = lat
+            lng = loc.getPoint().getX(); // x = lng
+        }
+
         return new LocationResponse(
-                provider.getLocation().getId(),
-                provider.getLocation().getAddress(),
-                provider.getLocation().getDistrict(),
-                provider.getLocation().getCity(),
-                provider.getLocation().getCountry(),
-                provider.getLocation().getPostalCode(),
-                provider.getLocation().getLatitude(),
-                provider.getLocation().getLongitude()
+                loc.getId(),
+                loc.getAddressLine1(),
+                loc.getAddressLine2(),
+                loc.getDistrict(),
+                loc.getCity(),
+                loc.getCountryIso2(),
+                loc.getPostalCode(),
+                lat,
+                lng,
+                loc.isActive(),
+                loc.getCreatedAt(),
+                loc.getUpdatedAt()
         );
     }
+
+    public LocationSummary getLocationSummary(UUID providerId) {
+        Provider provider = providerRepository.findById(providerId)
+                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+
+        return new LocationSummary(
+                provider.getLocation().getId(),
+                provider.getLocation().getAddressLine1(),
+                provider.getLocation().getCity(),
+                provider.getLocation().getCountryIso2()
+        );
+    }
+
 
 
 }

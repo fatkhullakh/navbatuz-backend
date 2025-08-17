@@ -1,12 +1,17 @@
 package uz.navbatuz.backend.location.dto;
 
+// request -> from client to API
 public record LocationRequest(
-        String address,
+        String addressLine1,
+        String addressLine2,
         String district,
         String city,
-        String country,
+        String countryIso2,   // e.g. "UZ"
         String postalCode,
-        Double latitude,
-        Double longitude
+        Double latitude,      // required
+        Double longitude,     // required
+        String provider,      // optional (e.g., "osm", "google")
+        String providerPlaceId
 ) {}
+
 

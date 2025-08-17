@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import uz.navbatuz.backend.auth.service.JwtService;
+import uz.navbatuz.backend.user.repository.UserRepository;
 
 
 import java.io.IOException;
@@ -20,13 +21,16 @@ import java.io.IOException;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired private JwtService jwtService;
-    @Autowired private UserDetailsService userDetailsService;
+    private final JwtService jwtService;
+    private final UserRepository userRepository; // inject repo directly
+
+    public JwtAuthenticationFilter(JwtService jwtService, UserRepository userRepository) {
+        this.jwtService = jwtService;
+        this.userRepository = userRepository;
+    }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
 
         final String header = request.getHeader("Authorization");
@@ -36,24 +40,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = header.substring(7);
-        String email = jwtService.extractUsername(token);
 
-        if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails user = userDetailsService.loadUserByUsername(email);
-
-            if (jwtService.isTokenValid(token, user)) {
-                String role = jwtService.extractRole(token);
-                var authority = new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + role);
-
-                var auth = new UsernamePasswordAuthenticationToken(
-                        user, null, java.util.List.of(authority)
-                );
-                auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(auth);
+        // Try UUID subject first
+        uz.navbatuz.backend.user.model.User domainUser = null;
+        try {
+            var sub = jwtService.extractSubject(token); // UUID or legacy email
+            try {
+                var id = java.util.UUID.fromString(sub);
+                domainUser = userRepository.findById(id).orElse(null);
+            } catch (IllegalArgumentException ignored) {
+                // legacy token with email in sub
+                domainUser = userRepository.findByEmail(sub).orElse(null);
             }
+        } catch (Exception e) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        if (domainUser != null && SecurityContextHolder.getContext().getAuthentication() == null && !jwtService.isExpired(token)) {
+            var authority = new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + domainUser.getRole().name());
+            var auth = new UsernamePasswordAuthenticationToken(domainUser, null, java.util.List.of(authority));
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(auth);
         }
 
         chain.doFilter(request, response);
     }
-
 }
+

@@ -2,15 +2,13 @@ package uz.navbatuz.backend.appointment.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.appointment.dto.AppointmentRequest;
-import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
-import uz.navbatuz.backend.appointment.dto.RescheduleRequest;
-import uz.navbatuz.backend.appointment.model.Appointment;
-import uz.navbatuz.backend.appointment.model.AppointmentStatusHistory;
+import uz.navbatuz.backend.appointment.dto.*;
 import uz.navbatuz.backend.appointment.service.AppointmentService;
+import uz.navbatuz.backend.user.service.UserService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -22,6 +20,7 @@ import java.util.UUID;
 @RequestMapping("api/appointments")
 public class AppointmentController {
     private final AppointmentService appointmentService;
+    private final UserService userService;
 
     @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @PostMapping
@@ -45,8 +44,8 @@ public class AppointmentController {
     }
 
     @GetMapping("/{appointmentId}")
-    public ResponseEntity<AppointmentResponse> getAppointment(@PathVariable UUID appointmentId) {
-        return ResponseEntity.ok(appointmentService.getAppointment(appointmentId));
+    public ResponseEntity<AppointmentDetails> getAppointmentDetails(@PathVariable UUID appointmentId) {
+        return ResponseEntity.ok(appointmentService.getAppointmentDetails(appointmentId));
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")
@@ -68,6 +67,14 @@ public class AppointmentController {
         return ResponseEntity.ok(
                 appointmentService.reschedule(appointmentId, request)
         );
+    }
+
+    @PreAuthorize("hasAnyRole('ADMIN','CUSTOMER')")
+    @GetMapping("/me")
+    public ResponseEntity<List<AppointmentSummaryResponse>> myAppointments(Authentication auth) {
+        String email = auth.getName();                   // comes from JWT principal
+        UUID customerId = userService.findIdByEmail(email); // implement below
+        return ResponseEntity.ok(appointmentService.getCustomerAppointments1(customerId));
     }
 
     //TODO: Book again feature

@@ -46,6 +46,7 @@ public class User implements UserDetails {
     private boolean isActive;
     private Language language;
     private Role role;
+    private String country;
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
     @Override public String getUsername() { return email; }

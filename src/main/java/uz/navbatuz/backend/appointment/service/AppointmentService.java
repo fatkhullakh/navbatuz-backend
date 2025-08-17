@@ -3,13 +3,9 @@ package uz.navbatuz.backend.appointment.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-import uz.navbatuz.backend.appointment.dto.AppointmentRequest;
-import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
-import uz.navbatuz.backend.appointment.dto.RescheduleRequest;
+import uz.navbatuz.backend.appointment.dto.*;
 import uz.navbatuz.backend.appointment.model.Appointment;
 import uz.navbatuz.backend.appointment.model.AppointmentStatusHistory;
 import uz.navbatuz.backend.appointment.repository.AppointmentRepository;
@@ -66,6 +62,7 @@ public class AppointmentService {
 //            case RECEPTIONIST -> appointment.getWorker().getProvider().getReceptionists()
 //                    .stream()
 //                    .anyMatch(r -> r.getUser().getId().equals(currentUser.getId()));
+            case ADMIN -> true;
             default -> false;
         };
     }
@@ -111,6 +108,7 @@ public class AppointmentService {
                 worker.getId(),
                 service.getId(),
                 appointment.getCustomer().getId(),
+                appointment.getWorker().getProvider().getId(),
                 appointment.getDate(),
                 appointment.getStartTime(),
                 appointment.getEndTime(),
@@ -121,11 +119,11 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse book(AppointmentRequest request) {
         Worker worker = workerRepository.findById(request.workerId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"));
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
         ServiceEntity service = serviceRepository.findById(request.serviceId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+                .orElseThrow(() -> new RuntimeException("Service not found"));
         Customer customer = customerRepository.findById(request.customerId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
 
         boolean alreadyBooked = appointmentRepository
                 .existsByWorkerIdAndDateAndStartTime(
@@ -168,6 +166,7 @@ public class AppointmentService {
                 worker.getId(),
                 service.getId(),
                 customer.getId(),
+                worker.getProvider().getId(),
                 appointment.getDate(),
                 appointment.getStartTime(),
                 appointment.getEndTime(),
@@ -195,12 +194,55 @@ public class AppointmentService {
         return mapToResponse(appointment);
     }
 
+    public AppointmentDetails getAppointmentDetails(UUID appointmentId) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        return new AppointmentDetails(
+                a.getId(),
+                a.getDate(),
+                a.getStartTime(),
+                a.getEndTime(),
+                a.getStatus(),
+                a.getWorker().getProvider().getName(),
+                a.getWorker().getProvider().getLocation().getAddressLine1(),
+                a.getWorker().getProvider().getLocation().getCity(),
+                a.getWorker().getProvider().getLocation().getCountryIso2(),
+                a.getService().getName(),
+                a.getService().getPrice(),
+                a.getWorker().getUser().getName()
+        );
+    }
+
     public List<AppointmentResponse> getCustomerAppointments(UUID customerId) {
         return appointmentRepository.findByCustomerId(customerId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
     }
+
+    public List<AppointmentSummaryResponse> getCustomerAppointments1(UUID customerId) {
+        return appointmentRepository.findByCustomerId(customerId)
+                .stream()
+                .map(a -> new AppointmentSummaryResponse(
+                        a.getId(),
+                        a.getDate(),
+                        a.getStartTime(),
+                        a.getEndTime(),
+                        a.getStatus(),
+                        a.getWorker().getUser().getName(),
+                        a.getWorker().getProvider().getName(),
+                        a.getService().getName()
+                ))
+                .toList();
+    }
+
+//    public List<AppointmentResponse> getMyAppointments(UUID userId) {
+//        return appointmentRepository.findAllByCustomerOrWorker(userId)
+//                .stream()
+//                .map(this::mapToResponse)
+//                .toList();
+//    }
 
     @Transactional
     public void cancelAppointment(UUID appointmentId) {
@@ -251,6 +293,7 @@ public class AppointmentService {
                 a.getWorker().getId(),
                 a.getService().getId(),
                 a.getCustomer().getId(),
+                a.getWorker().getProvider().getId(),
                 a.getDate(),
                 a.getStartTime(),
                 a.getEndTime(),

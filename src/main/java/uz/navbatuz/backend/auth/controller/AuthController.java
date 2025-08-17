@@ -3,9 +3,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.auth.dto.AuthResponse;
-import uz.navbatuz.backend.auth.dto.LoginRequest;
-import uz.navbatuz.backend.auth.dto.RegisterRequest;
+import uz.navbatuz.backend.auth.dto.*;
 import uz.navbatuz.backend.auth.service.AuthService;
 
 
@@ -59,6 +57,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(authService.login(loginRequest));
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest req) {
+        authService.forgotPassword(req);
+        return ResponseEntity.noContent().build(); // 204 regardless
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest req) {
+        authService.resetPassword(req);
+        return ResponseEntity.noContent().build();
     }
 
 }

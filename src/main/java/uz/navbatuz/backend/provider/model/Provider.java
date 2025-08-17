@@ -57,8 +57,8 @@ public class Provider {
     @JoinColumn(name = "owner_id", updatable = false)
     private User owner;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "location_id")
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "location_id", nullable = true)
     private Location location;
 
     // TODO: Relationship Provider with Receptionist and hasReceptinist method

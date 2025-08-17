@@ -3,6 +3,7 @@ package uz.navbatuz.backend.config;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -37,10 +38,14 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").authenticated()
                         /*.requestMatchers("/api/workers/**").authenticated()*/
                         .requestMatchers("/api/workers/public/**").permitAll()
-                        .requestMatchers("/api/providers/public/**").permitAll()
-                        .requestMatchers("/api/providers/**").authenticated()
+                        .requestMatchers("/api/providers/**").permitAll()
                         .requestMatchers("/api/services/public/**").permitAll()
                         .requestMatchers("/api/appointments/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/providers/public/**",
+                                "/api/services/public/**",
+                                "/api/workers/free-slots/**"   // optional: if you want free-slots without login
+                        ).permitAll()
 
                         .anyRequest().authenticated()
                 )

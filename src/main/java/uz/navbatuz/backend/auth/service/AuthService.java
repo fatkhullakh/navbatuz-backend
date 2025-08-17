@@ -1,13 +1,14 @@
 package uz.navbatuz.backend.auth.service;
 import io.jsonwebtoken.Jwts;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import uz.navbatuz.backend.auth.dto.AuthResponse;
-import uz.navbatuz.backend.auth.dto.LoginRequest;
-import uz.navbatuz.backend.auth.dto.RegisterRequest;
+import uz.navbatuz.backend.auth.dto.*;
+import uz.navbatuz.backend.auth.model.PasswordResetToken;
+import uz.navbatuz.backend.auth.repository.PasswordResetTokenRepository;
 import uz.navbatuz.backend.common.Language;
 import uz.navbatuz.backend.common.MessageService;
 import uz.navbatuz.backend.common.Role;
@@ -17,6 +18,7 @@ import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 import uz.navbatuz.backend.auth.service.JwtService;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -34,7 +36,8 @@ public class AuthService {
     private final JwtService jwtService;
     private final MessageService messageService;
     private final CustomerRepository customerRepository;
-
+    private final PasswordResetTokenRepository resetRepo;
+    private static final SecureRandom RNG = new SecureRandom();
 
     /*
     Converts incoming request into a User object.
@@ -102,6 +105,62 @@ public class AuthService {
 
         String token = jwtService.generateToken(user);
         return new AuthResponse(token);
+    }
+
+    private String genCode6() {
+        // 6-digit numeric, zero-padded
+        int n = RNG.nextInt(1_000_000);
+        return String.format("%06d", n);
+    }
+
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest req) {
+        var userOpt = userRepository.findByEmail(req.getEmail());
+        // For security: always 204, even if user not found.
+        if (userOpt.isEmpty()) return;
+
+        var user = userOpt.get();
+
+        // housekeeping: delete old expired tokens
+        resetRepo.deleteByUserAndExpiresAtBefore(user, LocalDateTime.now());
+
+        String code = genCode6();
+        var token = PasswordResetToken.builder()
+                .user(user)
+                .codeHash(passwordEncoder.encode(code))
+                .expiresAt(LocalDateTime.now().plusMinutes(15))
+                .used(false)
+                .build();
+        resetRepo.save(token);
+
+        // TODO send email or SMS. For now log it.
+        System.out.println("[ForgotPassword] email=" + user.getEmail() + " code=" + code);
+
+        // If you have JavaMailSender, send the code here.
+    }
+
+    @Transactional
+    public void resetPassword(ResetPasswordRequest req) {
+        var user = userRepository.findByEmail(req.getEmail())
+                .orElseThrow(() -> new RuntimeException("Invalid email or code"));
+
+        // Find latest active tokens
+        var tokens = resetRepo.findByUserAndUsedFalseOrderByExpiresAtDesc(user);
+        var now = LocalDateTime.now();
+
+        var match = tokens.stream()
+                .filter(t -> t.getExpiresAt().isAfter(now))
+                .filter(t -> passwordEncoder.matches(req.getCode(), t.getCodeHash()))
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Invalid email or code"));
+
+        // mark all tokens used
+        tokens.forEach(t -> t.setUsed(true));
+        resetRepo.saveAll(tokens);
+
+        // set new password
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        userRepository.save(user);
     }
 
 }

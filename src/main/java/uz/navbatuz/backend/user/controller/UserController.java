@@ -9,6 +9,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
+import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 import uz.navbatuz.backend.user.service.UserService;
 
@@ -25,7 +26,7 @@ public class UserController {
     private final UserService userService;
 
     @PreAuthorize("hasRole('ADMIN')")
-    @RequestMapping
+    @GetMapping("/all")
     public ResponseEntity<List<UserDetailsDTO>> getAllActiveUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
@@ -43,8 +44,11 @@ public class UserController {
             throw new RuntimeException("Unauthenticated");
         }
 
-        String email = authentication.getName();
-        return ResponseEntity.ok(userService.getUserByEmail(email));
+        var dto = userService.getUserByEmail(authentication.getName());
+        return ResponseEntity
+                .ok()
+                .cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(dto);
     }
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")
@@ -68,6 +72,28 @@ public class UserController {
         userService.changePassword(principal.getName(), request);
         return ResponseEntity.ok("Password updated successfully");
     }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")
+    @Transactional
+    @PutMapping("/{id}/settings")
+    public ResponseEntity<UserDetailsDTO> updateSettingsById(
+            @PathVariable UUID id,
+            @RequestBody SettingsUpdateRequest req
+    ) {
+        return ResponseEntity.ok(userService.updateSettingsById(id, req));
+    }
+
+
+    // CHANGE PASSWORD VIA UUID
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN', 'CUSTOMER')")
+    @PutMapping("/{id}/change-password")
+    public ResponseEntity<String> changePasswordById(
+            @PathVariable UUID id,
+            @RequestBody ChangePasswordRequest request) {
+        userService.changePasswordById(id, request);
+        return ResponseEntity.ok("Password updated successfully");
+    }
+
 
 
 
