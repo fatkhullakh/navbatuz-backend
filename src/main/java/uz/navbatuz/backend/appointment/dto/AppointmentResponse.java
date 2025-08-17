@@ -10,11 +10,14 @@ public record AppointmentResponse (
         UUID id,
         UUID workerId,
         UUID serviceId,
-        UUID customerId,
         UUID providerId,
         LocalDate date,
         LocalTime startTime,
         LocalTime endTime,
-        AppointmentStatus status
+        AppointmentStatus status,
+
+        UUID customerId,
+        UUID guestId,
+        String guestNameMasked
 ){
 }

@@ -7,8 +7,11 @@ import java.util.UUID;
 public record AppointmentRequest (
         UUID workerId,
         UUID serviceId,
-        UUID customerId,
         LocalDate date,
-        LocalTime startTime
+        LocalTime startTime,
+
+        UUID guestId,      // staff: reuse existing guest
+        String guestPhone, // staff: create/reuse by phone (provider-scoped)
+        String guestName
 ){
 }
