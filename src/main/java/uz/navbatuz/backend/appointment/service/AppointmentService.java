@@ -3,8 +3,10 @@ package uz.navbatuz.backend.appointment.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.appointment.dto.*;
 import uz.navbatuz.backend.appointment.model.Appointment;
 import uz.navbatuz.backend.appointment.model.AppointmentStatusHistory;
@@ -14,8 +16,11 @@ import uz.navbatuz.backend.auth.service.AuthService;
 import uz.navbatuz.backend.common.AppointmentStatus;
 import uz.navbatuz.backend.customer.model.Customer;
 import uz.navbatuz.backend.customer.repository.CustomerRepository;
+import uz.navbatuz.backend.guest.model.Guest;
+import uz.navbatuz.backend.guest.repository.GuestRepository;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.security.AuthorizationService;
+import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.user.model.User;
@@ -46,41 +51,52 @@ public class AppointmentService {
     private final UserRepository userRepository;
     private final AppointmentStatusHistoryRepository historyRepository;
     private final AuthService authService;
+    private final GuestRepository guestRepository;
+
+    private final CurrentUserService currentUserService;
+
+    private static final java.util.Set<AppointmentStatus> BLOCKING_STATUSES =
+            java.util.EnumSet.of(AppointmentStatus.BOOKED, AppointmentStatus.RESCHEDULED);
+
 
     private User getCurrentUser() {
-        var auth = SecurityContextHolder.getContext().getAuthentication();
-        String email = auth.getName();
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        UUID id = currentUserService.getCurrentUserId();
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     private boolean hasPermissionToModify(Appointment appointment, User currentUser) {
         return switch (currentUser.getRole()) {
-            case CUSTOMER -> appointment.getCustomer().getId().equals(currentUser.getId());
-            case WORKER -> appointment.getWorker().getId().equals(currentUser.getId());
-            case OWNER -> appointment.getWorker().getProvider().getOwner().getId().equals(currentUser.getId());
-//            case RECEPTIONIST -> appointment.getWorker().getProvider().getReceptionists()
-//                    .stream()
-//                    .anyMatch(r -> r.getUser().getId().equals(currentUser.getId()));
+            case CUSTOMER -> appointment.getCustomer() != null
+                    && appointment.getCustomer().getUser() != null
+                    && appointment.getCustomer().getUser().getId().equals(currentUser.getId());
+            case WORKER -> appointment.getWorker() != null
+                    && appointment.getWorker().getUser() != null
+                    && appointment.getWorker().getUser().getId().equals(currentUser.getId());
+            case OWNER -> appointment.getWorker() != null
+                    && appointment.getWorker().getProvider() != null
+                    && appointment.getWorker().getProvider().getOwner() != null
+                    && appointment.getWorker().getProvider().getOwner().getId().equals(currentUser.getId());
             case ADMIN -> true;
             default -> false;
         };
     }
 
+
     @Transactional
     public AppointmentResponse reschedule(UUID appointmentId, RescheduleRequest request) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
 
-        AppointmentStatus oldStatus = appointment.getStatus();
+        var oldStatus = appointment.getStatus();
 
         User currentUser = getCurrentUser();
         if (!hasPermissionToModify(appointment, currentUser)) {
-            throw new RuntimeException("You are not allowed to modify this appointment");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to modify this appointment");
         }
 
         if (appointment.getStatus() != AppointmentStatus.BOOKED) {
-            throw new RuntimeException("Only booked appointments can be rescheduled");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only booked appointments can be rescheduled");
         }
 
         Worker worker = appointment.getWorker();
@@ -91,95 +107,69 @@ public class AppointmentService {
                 request.newDate(),
                 service.getDuration()
         );
-
         if (!freeSlots.contains(request.newStartTime())) {
-            throw new RuntimeException("Requested time slot is not available");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested time slot is not available");
         }
 
         appointment.setDate(request.newDate());
         appointment.setStartTime(request.newStartTime());
         appointment.setEndTime(request.newStartTime().plus(service.getDuration()));
-        appointment.setStatus(AppointmentStatus.RESCHEDULED);
+        appointment.setStatus(AppointmentStatus.BOOKED);
         appointmentRepository.save(appointment);
         logStatusChange(appointment, oldStatus, AppointmentStatus.RESCHEDULED);
 
-        return new AppointmentResponse(
-                appointment.getId(),
-                worker.getId(),
-                service.getId(),
-                appointment.getCustomer().getId(),
-                appointment.getWorker().getProvider().getId(),
-                appointment.getDate(),
-                appointment.getStartTime(),
-                appointment.getEndTime(),
-                appointment.getStatus()
-        );
+        return toResponse(appointment);
     }
 
     @Transactional
-    public AppointmentResponse book(AppointmentRequest request) {
-        Worker worker = workerRepository.findById(request.workerId())
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
-        ServiceEntity service = serviceRepository.findById(request.serviceId())
-                .orElseThrow(() -> new RuntimeException("Service not found"));
-        Customer customer = customerRepository.findById(request.customerId())
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+    public AppointmentResponse book(AppointmentNormalized cmd, UUID createdByUser) {
+        var worker  = workerRepository.findById(cmd.workerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"));
+        var service = serviceRepository.findById(cmd.serviceId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
 
-        boolean alreadyBooked = appointmentRepository
-                .existsByWorkerIdAndDateAndStartTime(
-                        request.workerId(),
-                        request.date(),
-                        request.startTime()
-                );
-
-        if (alreadyBooked) {
-            throw new RuntimeException("Slot already booked by someone else");
+        if (appointmentRepository.existsByWorkerIdAndDateAndStartTimeAndStatusIn(
+                cmd.workerId(), cmd.date(), cmd.startTime(), BLOCKING_STATUSES)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot already booked");
         }
 
-        var freeSlots = workerService.getFreeSlots(
-                request.workerId(),
-                request.date(),
-                service.getDuration()
-        );
+        var free = workerService.getFreeSlots(cmd.workerId(), cmd.date(), service.getDuration());
+        if (!new java.util.HashSet<>(free).contains(cmd.startTime()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested time slot is not available");
 
-        Set<LocalTime> slotTimes = new HashSet<>(freeSlots);
-
-        if(!slotTimes.contains(request.startTime())) {
-            throw new RuntimeException("Requested time slot is not available");
+        Customer customer = null;
+        uz.navbatuz.backend.guest.model.Guest guest = null;
+        if (cmd.customerId() != null) {
+            customer = customerRepository.findById(cmd.customerId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+        } else {
+            guest = guestRepository.findById(cmd.guestId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Guest not found"));
+            if (!guest.getProvider().getId().equals(worker.getProvider().getId()))
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Guest belongs to another provider");
         }
 
-        Appointment appointment = Appointment.builder()
+        var appt = Appointment.builder()
                 .worker(worker)
                 .service(service)
-                .customer(customer)
-                .date(request.date())
-                .startTime(request.startTime())
-                .endTime(request.startTime().plus(service.getDuration()))
+                .customer(customer)      // null if guest
+                .guest(guest)            // null if customer
+                .date(cmd.date())
+                .startTime(cmd.startTime())
+                .endTime(cmd.startTime().plus(service.getDuration()))
                 .status(AppointmentStatus.BOOKED)
                 .bookedDate(LocalDateTime.now())
+                .createdByUser(createdByUser)
                 .build();
 
-        appointmentRepository.save(appointment);
-
-        return new AppointmentResponse(
-                appointment.getId(),
-                worker.getId(),
-                service.getId(),
-                customer.getId(),
-                worker.getProvider().getId(),
-                appointment.getDate(),
-                appointment.getStartTime(),
-                appointment.getEndTime(),
-                appointment.getStatus()
-        );
+        appointmentRepository.save(appt);
+        return toResponse(appt);
     }
 
-    public List<AppointmentResponse> getWorkerAppointments(UUID workerId, LocalDate date) {
-        return appointmentRepository.findByWorkerIdAndDate(workerId, date)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
-    }
+//    public List<AppointmentResponse> getWorkerAppointments(UUID workerId, LocalDate date, AppointmentStatus status) {
+//        return appointmentRepository.findByWorkerIdAndDateAndStatusIn(workerId, date, status)
+//                .stream().map(this::toResponse).toList();
+//    }
 
 //    public List<AppointmentResponse> getUpcomingWorkerAppointments(UUID workerId, LocalDate date) {
 //        return appointmentRepository.findByWorkerIdAndDateAfter(workerId, date)
@@ -190,8 +180,8 @@ public class AppointmentService {
 
     public AppointmentResponse getAppointment(UUID appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
-        return mapToResponse(appointment);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+        return toResponse(appointment);
     }
 
     public AppointmentDetails getAppointmentDetails(UUID appointmentId) {
@@ -216,9 +206,7 @@ public class AppointmentService {
 
     public List<AppointmentResponse> getCustomerAppointments(UUID customerId) {
         return appointmentRepository.findByCustomerId(customerId)
-                .stream()
-                .map(this::mapToResponse)
-                .toList();
+                .stream().map(this::toResponse).toList();
     }
 
     public List<AppointmentSummaryResponse> getCustomerAppointments1(UUID customerId) {
@@ -287,17 +275,28 @@ public class AppointmentService {
         logStatusChange(appointment, oldStatus, AppointmentStatus.COMPLETED);
     }
 
-    private AppointmentResponse mapToResponse(Appointment a) {
+    private AppointmentResponse toResponse(Appointment a) {
+        UUID customerId = (a.getCustomer() != null) ? a.getCustomer().getId() : null;
+        UUID guestId = (a.getGuest() != null) ? a.getGuest().getId() : null;
+
+        String guestMask = null;
+        if (a.getGuest() != null && a.getGuest().getPhoneNumber() != null) {
+            String p = a.getGuest().getPhoneNumber();
+            guestMask = (p.length() < 4) ? "***" : "********" + p.substring(p.length() - 4);
+        }
+
         return new AppointmentResponse(
                 a.getId(),
                 a.getWorker().getId(),
                 a.getService().getId(),
-                a.getCustomer().getId(),
                 a.getWorker().getProvider().getId(),
                 a.getDate(),
                 a.getStartTime(),
                 a.getEndTime(),
-                a.getStatus()
+                a.getStatus(),
+                customerId,
+                guestId,
+                guestMask
         );
     }
 

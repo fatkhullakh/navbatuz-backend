@@ -15,6 +15,7 @@ import uz.navbatuz.backend.availability.model.PlannedAvailability;
 import uz.navbatuz.backend.availability.repository.ActualAvailabilityRepository;
 import uz.navbatuz.backend.availability.repository.BreakRepository;
 import uz.navbatuz.backend.availability.repository.PlannedAvailabilityRepository;
+import uz.navbatuz.backend.common.AppointmentStatus;
 import uz.navbatuz.backend.common.WorkerCategoryValidator;
 import uz.navbatuz.backend.provider.model.BusinessHour;
 import uz.navbatuz.backend.provider.model.Provider;
@@ -53,6 +54,9 @@ public class WorkerService {
     private final AuthorizationService authorizationService;
     private final AppointmentRepository appointmentRepository;
     private final BusinessHourRepository businessHourRepository;
+
+    private static final java.util.Set<AppointmentStatus> BLOCKING_STATUSES =
+            java.util.EnumSet.of(AppointmentStatus.BOOKED, AppointmentStatus.RESCHEDULED);
 
 
     @Transactional
@@ -371,7 +375,7 @@ public class WorkerService {
         }
 
         List<Appointment> bookedAppointments =
-                appointmentRepository.findByWorkerIdAndDate(workerId, date);
+                appointmentRepository.findByWorkerIdAndDateAndStatusIn(workerId, date, BLOCKING_STATUSES);
 
         List<LocalTime> slots = new ArrayList<>();
         for (TimeRange range : availableTimeRanges) {
@@ -394,5 +398,11 @@ public class WorkerService {
         LocalTime slotEnd = slotStart.plus(serviceDuration);
         return slotStart.isBefore(appointment.getEndTime()) &&
                 slotEnd.isAfter(appointment.getStartTime());
+    }
+
+    public UUID requireProviderId(UUID workerId) {
+        return workerRepository.findById(workerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"))
+                .getProvider().getId();
     }
 }

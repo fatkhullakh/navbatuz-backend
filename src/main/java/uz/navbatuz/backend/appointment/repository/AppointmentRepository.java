@@ -5,17 +5,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
 import uz.navbatuz.backend.appointment.model.Appointment;
+import uz.navbatuz.backend.common.AppointmentStatus;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
-    List<Appointment> findByWorkerIdAndDate(UUID workerId, LocalDate date);
+    boolean existsByWorkerIdAndDateAndStartTimeAndStatusIn(
+            UUID workerId, LocalDate date, LocalTime startTime, Collection<AppointmentStatus> statuses);
 
-    boolean existsByWorkerIdAndDateAndStartTime(UUID workerId, LocalDate date, LocalTime startTime);
+    List<Appointment> findByWorkerIdAndDateAndStatusIn(
+            UUID workerId, LocalDate date, Collection<AppointmentStatus> statuses);
 
     Optional<Appointment> findById(UUID appointmentId);
 

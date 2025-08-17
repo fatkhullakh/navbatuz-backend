@@ -3,11 +3,14 @@ package uz.navbatuz.backend.user.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
 import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
@@ -99,11 +102,11 @@ public class UserService implements UserDetailsService {
         );
     }
 
-    public UUID findIdByEmail(String email) {
-        User u = userRepository.findByEmail(email)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
-        return u.getId();
-    }
+//    public UUID findIdByEmail(String email) {
+//        User u = userRepository.findByEmail(email)
+//                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+//        return u.getId();
+//    }
 
     public UserDetailsDTO updateSettingsById(UUID id, SettingsUpdateRequest req) {
         var user = userRepository.findById(id)
@@ -169,6 +172,32 @@ public class UserService implements UserDetailsService {
         user.setEmail(request.getEmail());
 
         userRepository.save(user);
+    }
+
+    public User requireByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    public UUID findIdByEmail(String email) {
+        return requireByEmail(email).getId();
+    }
+
+    /** Robustly resolve current user's UUID from Authentication (email or UUID principal). */
+    public UUID requireUserIdByAuth(Authentication auth) {
+        if (auth == null || auth.name() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthenticated");
+        }
+        String principal = auth.name();
+
+        // If your JWT subject is UUID, accept it directly.
+        try {
+            return UUID.fromString(principal);
+        } catch (IllegalArgumentException ignore) {
+            // Otherwise, treat it as email.
+        }
+
+        return findIdByEmail(principal);
     }
 
 }

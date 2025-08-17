@@ -2,15 +2,22 @@ package uz.navbatuz.backend.appointment.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.appointment.dto.*;
 import uz.navbatuz.backend.appointment.service.AppointmentService;
+import uz.navbatuz.backend.customer.service.CustomerService;
+import uz.navbatuz.backend.guest.service.GuestService;
+import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.service.UserService;
+import uz.navbatuz.backend.worker.service.WorkerService;
 
 import java.time.LocalDate;
+import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
 
@@ -21,21 +28,63 @@ import java.util.UUID;
 public class AppointmentController {
     private final AppointmentService appointmentService;
     private final UserService userService;
+    private final CustomerService customerService;
+    private final WorkerService workerService;
+    private final GuestService guestService;
+    private final CurrentUserService currentUserService;
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
+    /** Allow customers AND staff. Customers book for self; staff always book as guest. */
+    @PreAuthorize("hasAnyRole('CUSTOMER','OWNER','RECEPTIONIST','WORKER','ADMIN')")
     @PostMapping
-    public ResponseEntity<AppointmentResponse> book(@RequestBody AppointmentRequest request) {
-        return ResponseEntity.ok(appointmentService.book(request));
+    public ResponseEntity<AppointmentResponse> book(@RequestBody AppointmentRequest req, Authentication auth) {
+        boolean isCustomer = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"));
+
+        UUID effectiveCustomerId = null;
+        UUID effectiveGuestId = null;
+
+        if (isCustomer) {
+            effectiveCustomerId = customerService.requireCustomerIdByUsername(auth.getName());
+        } else {
+            if (req.guestId() != null) {
+                effectiveGuestId = req.guestId();
+            } else if (req.guestPhone() != null && !req.guestPhone().isBlank()) {
+                var providerId = workerService.requireProviderId(req.workerId());
+                UUID actorUserId = currentUserService.getCurrentUserId();
+                var guest = guestService.findOrCreate(
+                        providerId, req.guestPhone(), req.guestName(),
+                        actorUserId, auth.getAuthorities().iterator().next().getAuthority()
+                );
+                effectiveGuestId = guest.getId();
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide guestId or guestPhone");
+            }
+        }
+
+        if ((effectiveCustomerId == null) == (effectiveGuestId == null)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Exactly one of customer or guest must be set");
+        }
+
+        var normalized = new AppointmentNormalized(
+                req.workerId(), req.serviceId(), req.date(), req.startTime(),
+                effectiveCustomerId, effectiveGuestId
+        );
+
+        UUID actorUserId = currentUserService.getCurrentUserId();
+        var resp = appointmentService.book(
+                normalized, actorUserId
+        );
+        return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
-    @GetMapping("/worker/{workerId}")
-    public ResponseEntity<List<AppointmentResponse>> getWorkerAppointments(
-            @PathVariable UUID workerId,
-            @RequestParam LocalDate date
-    ) {
-        return ResponseEntity.ok(appointmentService.getWorkerAppointments(workerId, date));
-    }
+//    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+//    @GetMapping("/worker/{workerId}")
+//    public ResponseEntity<List<AppointmentResponse>> getWorkerAppointments(
+//            @PathVariable UUID workerId,
+//            @RequestParam LocalDate date
+//    ) {
+//        return ResponseEntity.ok(appointmentService.getWorkerAppointments(workerId, date));
+//    }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'CUSTOMER')")
     @GetMapping("/customer/{customerId}")
