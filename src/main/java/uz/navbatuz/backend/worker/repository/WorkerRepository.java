@@ -30,4 +30,6 @@ public interface WorkerRepository extends JpaRepository<Worker, UUID> {
        where w.provider.id = :providerId
     """)
     List<WorkerResponseForService> findWorkerResponsesByProviderId(@Param("providerId") UUID providerId);
+
+    boolean existsByUserIdAndProviderId(UUID userId, UUID providerId);
 }
