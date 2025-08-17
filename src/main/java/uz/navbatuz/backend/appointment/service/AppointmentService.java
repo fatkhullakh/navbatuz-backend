@@ -19,6 +19,9 @@ import uz.navbatuz.backend.customer.repository.CustomerRepository;
 import uz.navbatuz.backend.guest.model.Guest;
 import uz.navbatuz.backend.guest.repository.GuestRepository;
 import uz.navbatuz.backend.provider.model.Provider;
+import uz.navbatuz.backend.provider.repository.ProviderRepository;
+import uz.navbatuz.backend.providerclient.model.ProviderClient;
+import uz.navbatuz.backend.providerclient.service.ProviderClientService;
 import uz.navbatuz.backend.security.AuthorizationService;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.service.model.ServiceEntity;
@@ -29,6 +32,7 @@ import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
 import uz.navbatuz.backend.worker.service.WorkerService;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -52,8 +56,12 @@ public class AppointmentService {
     private final AppointmentStatusHistoryRepository historyRepository;
     private final AuthService authService;
     private final GuestRepository guestRepository;
-
+    private final ProviderRepository providerRepository;
+    private final ProviderClientService providerClientService;
     private final CurrentUserService currentUserService;
+
+    private static final int RESCHEDULE_MIN_LEAD_MINUTES = 120;
+    private static final int CANCEL_MIN_LEAD_MINUTES     = 120;
 
     private static final java.util.Set<AppointmentStatus> BLOCKING_STATUSES =
             java.util.EnumSet.of(AppointmentStatus.BOOKED, AppointmentStatus.RESCHEDULED);
@@ -82,11 +90,26 @@ public class AppointmentService {
         };
     }
 
+    private void assertLead(LocalDate d, LocalTime t, int minMinutes, String action) {
+        var now  = LocalDateTime.now();
+        var when = LocalDateTime.of(d, t);
+        long diffMin = Duration.between(now, when).toMinutes();
+        if (diffMin < minMinutes) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Too late to " + action + " (" + minMinutes + " min window)"
+            );
+        }
+    }
+
 
     @Transactional
     public AppointmentResponse reschedule(UUID appointmentId, RescheduleRequest request) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+
+        // MVP rule: block reschedules inside fixed window
+        assertLead(request.newDate(), request.newStartTime(), RESCHEDULE_MIN_LEAD_MINUTES, "reschedule");
 
         var oldStatus = appointment.getStatus();
 
@@ -94,7 +117,6 @@ public class AppointmentService {
         if (!hasPermissionToModify(appointment, currentUser)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to modify this appointment");
         }
-
         if (appointment.getStatus() != AppointmentStatus.BOOKED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only booked appointments can be rescheduled");
         }
@@ -102,15 +124,13 @@ public class AppointmentService {
         Worker worker = appointment.getWorker();
         ServiceEntity service = appointment.getService();
 
-        var freeSlots = workerService.getFreeSlots(
-                worker.getId(),
-                request.newDate(),
-                service.getDuration()
-        );
-        if (!freeSlots.contains(request.newStartTime())) {
+        // validate new slot
+        var freeSlots = workerService.getFreeSlots(worker.getId(), request.newDate(), service.getDuration());
+        if (!new java.util.HashSet<>(freeSlots).contains(request.newStartTime())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested time slot is not available");
         }
 
+        // move and keep status BOOKED; log RESCHEDULED in history
         appointment.setDate(request.newDate());
         appointment.setStartTime(request.newStartTime());
         appointment.setEndTime(request.newStartTime().plus(service.getDuration()));
@@ -128,15 +148,19 @@ public class AppointmentService {
         var service = serviceRepository.findById(cmd.serviceId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
 
+        // block if already taken (only blocking statuses)
         if (appointmentRepository.existsByWorkerIdAndDateAndStartTimeAndStatusIn(
                 cmd.workerId(), cmd.date(), cmd.startTime(), BLOCKING_STATUSES)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Slot already booked");
         }
 
+        // sanity: ensure requested time is part of free slots
         var free = workerService.getFreeSlots(cmd.workerId(), cmd.date(), service.getDuration());
-        if (!new java.util.HashSet<>(free).contains(cmd.startTime()))
+        if (!new java.util.HashSet<>(free).contains(cmd.startTime())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Requested time slot is not available");
+        }
 
+        // resolve party
         Customer customer = null;
         uz.navbatuz.backend.guest.model.Guest guest = null;
         if (cmd.customerId() != null) {
@@ -145,8 +169,9 @@ public class AppointmentService {
         } else {
             guest = guestRepository.findById(cmd.guestId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Guest not found"));
-            if (!guest.getProvider().getId().equals(worker.getProvider().getId()))
+            if (!guest.getProvider().getId().equals(worker.getProvider().getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Guest belongs to another provider");
+            }
         }
 
         var appt = Appointment.builder()
@@ -163,6 +188,12 @@ public class AppointmentService {
                 .build();
 
         appointmentRepository.save(appt);
+
+        // update provider_client index
+        providerClientService.upsertFromAppointment(
+                worker.getProvider(), customer, guest, null, null, createdByUser
+        );
+
         return toResponse(appt);
     }
 
@@ -234,25 +265,30 @@ public class AppointmentService {
 
     @Transactional
     public void cancelAppointment(UUID appointmentId) {
-        Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
-
-        AppointmentStatus oldStatus = appointment.getStatus();
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
 
         User currentUser = getCurrentUser();
-
-        if (!hasPermissionToModify(appointment, currentUser)) {
-            throw new RuntimeException("Not allowed to cancel");
+        if (!hasPermissionToModify(a, currentUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to cancel");
         }
 
-        if (appointment.getStatus() == AppointmentStatus.COMPLETED) {
-            throw new RuntimeException("Completed appointment cannot be cancelled");
+        // Block last-minute cancels for customers (MVP rule).
+        // If you want to block staff too, remove this role check.
+        if (currentUser.getRole() == uz.navbatuz.backend.common.Role.CUSTOMER) {
+            assertLead(a.getDate(), a.getStartTime(), CANCEL_MIN_LEAD_MINUTES, "cancel");
         }
 
-        appointment.setStatus(AppointmentStatus.CANCELLED);
-        appointmentRepository.save(appointment);
-        logStatusChange(appointment, oldStatus, AppointmentStatus.CANCELLED);
+        if (a.getStatus() == AppointmentStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Completed appointment cannot be cancelled");
+        }
+
+        var oldStatus = a.getStatus();
+        a.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.save(a);
+        logStatusChange(a, oldStatus, AppointmentStatus.CANCELLED);
     }
+
 
     @Transactional
     public void completeAppointment(UUID appointmentId) {
