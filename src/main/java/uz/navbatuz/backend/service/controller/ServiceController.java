@@ -55,13 +55,13 @@ public class ServiceController {
         return ResponseEntity.ok(serviceService.createService(request));
     }
 
-    @GetMapping("/public/provider/{providerId}")
+    @GetMapping("/public/provider/{providerId}/services")
     public ResponseEntity<List<ServiceSummaryResponse>> getAllPublicServicesByProvider(@PathVariable UUID providerId) {
         List<ServiceSummaryResponse> services = serviceService.getAllPublicServicesByProvider(providerId);
         return ResponseEntity.ok(services);
     }
 
-    @GetMapping("/public/worker/{workerId}")
+    @GetMapping("/public/worker/{workerId}/services")
     public ResponseEntity<List<ServiceSummaryResponse>> getAllActiveServicesByWorker(@PathVariable UUID workerId) {
         List<ServiceSummaryResponse> services = serviceService.getAllPublicServicesByWorker(workerId);
         return ResponseEntity.ok(services);

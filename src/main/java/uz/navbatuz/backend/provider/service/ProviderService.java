@@ -24,6 +24,8 @@ import org.springframework.data.domain.Page;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
+import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.repository.WorkerRepository;
 
 import java.time.DayOfWeek;
 import java.util.*;
@@ -36,6 +38,7 @@ public class ProviderService {
     private final UserRepository userRepository;
     private final BusinessHourRepository businessHourRepository;
     private final CurrentUserService currentUserService;
+    private final WorkerRepository workerRepository;
 
     public Provider create(ProviderRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -62,19 +65,49 @@ public class ProviderService {
         return providerRepository.save(provider);
     }
 
+    private LocationSummary toSummary(uz.navbatuz.backend.location.model.Location loc) {
+        if (loc == null) return null;
+        return new LocationSummary(
+                loc.getId(),
+                loc.getAddressLine1(),
+                loc.getCity(),
+                loc.getCountryIso2()
+        );
+    }
 
-    public ProvidersDetails getById(UUID id) {
+    public ProviderResponse getById(UUID id) {
         Provider provider = providerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Provider not found"));
 
+        return new ProviderResponse(
+                provider.getId(),
+                provider.getName(),
+                provider.getDescription(),
+                provider.getAvgRating(),
+                provider.getCategory(),
+                toSummary(provider.getLocation())
+        );
+    }
+
+    public ProvidersDetails  getProvidersDetails(UUID id) {
+        Provider provider = providerRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Provider not found"));
+
+
+        List<WorkerResponseForService> workers = workerRepository.findWorkerResponsesByProviderId(id); // Example
+        List<BusinessHourResponse> businessHours = businessHourRepository.findByProvider_Id(id);
+
         return new ProvidersDetails(
+                provider.getId(),
                 provider.getName(),
                 provider.getDescription(),
                 provider.getCategory(),
-                provider.getTeamSize(),
+                workers,
                 provider.getEmail(),
                 provider.getPhoneNumber(),
-                provider.getAvgRating()
+                provider.getAvgRating(),
+                businessHours,
+                toSummary(provider.getLocation())
         );
     }
 
@@ -115,15 +148,7 @@ public class ProviderService {
 //                .toList();
 //    }
 
-    private LocationSummary toSummary(uz.navbatuz.backend.location.model.Location loc) {
-        if (loc == null) return null;
-        return new LocationSummary(
-                loc.getId(),
-                loc.getAddressLine1(),
-                loc.getCity(),
-                loc.getCountryIso2()
-        );
-    }
+
 
 
     public Page<ProviderResponse> getAllActiveProviders(Pageable pageable) {
