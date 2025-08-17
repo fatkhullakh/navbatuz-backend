@@ -3,8 +3,10 @@ package uz.navbatuz.backend.appointment.service;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.appointment.dto.AppointmentRequest;
 import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
 import uz.navbatuz.backend.appointment.dto.RescheduleRequest;
@@ -119,11 +121,11 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse book(AppointmentRequest request) {
         Worker worker = workerRepository.findById(request.workerId())
-                .orElseThrow(() -> new RuntimeException("Worker not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"));
         ServiceEntity service = serviceRepository.findById(request.serviceId())
-                .orElseThrow(() -> new RuntimeException("Service not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
         Customer customer = customerRepository.findById(request.customerId())
-                .orElseThrow(() -> new RuntimeException("Customer not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
 
         boolean alreadyBooked = appointmentRepository
                 .existsByWorkerIdAndDateAndStartTime(
