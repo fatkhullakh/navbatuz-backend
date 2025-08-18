@@ -9,9 +9,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
 import uz.navbatuz.backend.service.dto.ServiceSummaryResponse;
+import uz.navbatuz.backend.service.mapper.ServiceMapper;
 import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.service.service.ServiceService;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
@@ -30,6 +32,8 @@ public class ServiceController {
 
     private final ServiceService serviceService;
     private final ServiceRepository serviceRepository;
+    private final CurrentUserService currentUserService;
+    private final ServiceMapper serviceMapper;
 
 //    {
 //            "name": "SPA - Men",
@@ -170,6 +174,19 @@ public class ServiceController {
         Pageable pageable = PageRequest.of(page, size);
         Page<ServiceSummaryResponse> services = serviceService.searchServices(category, minPrice, maxPrice, pageable);
         return ResponseEntity.ok(services);
+    }
+
+    record ImageUrlRequest(String url) {}
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @PutMapping("/{serviceId}/image")
+    public ResponseEntity<ServiceSummaryResponse> setImage(
+            @PathVariable UUID serviceId,
+            @RequestBody ImageUrlRequest req
+    ) {
+        var actorId = currentUserService.getCurrentUserId();
+        var s = serviceService.updateImage(serviceId, req.url(), actorId);
+        return ResponseEntity.ok(serviceMapper.toSummaryResponse(s));
     }
 
 

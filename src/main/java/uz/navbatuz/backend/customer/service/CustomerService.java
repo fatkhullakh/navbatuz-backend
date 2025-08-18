@@ -41,7 +41,8 @@ public class CustomerService {
                             user.getPhoneNumber(),
                             user.getEmail(),
                             user.getLanguage(),
-                            user.getCountry()
+                            user.getCountry(),
+                            user.getAvatarUrl()
                     );
                 })
                 .toList();
@@ -103,7 +104,8 @@ public class CustomerService {
                 p.getDescription(),
                 p.getAvgRating(),
                 p.getCategory(),
-                toSummary(p.getLocation())
+                toSummary(p.getLocation()),
+                p.getLogoUrl()
         );
     }
 

@@ -1,10 +1,12 @@
 package uz.navbatuz.backend.user.service;
 
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.net.openssl.ciphers.Authentication;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -44,7 +46,8 @@ public class UserService implements UserDetailsService {
                         user.getPhoneNumber(),
                         user.getEmail(),
                         user.getLanguage(),
-                        user.getCountry()
+                        user.getCountry(),
+                        user.getAvatarUrl()
                 ))
                 .toList();
     }
@@ -62,7 +65,8 @@ public class UserService implements UserDetailsService {
                 user.getPhoneNumber(),
                 user.getEmail(),
                 user.getLanguage(),
-                user.getCountry()
+                user.getCountry(),
+                user.getAvatarUrl()
         );
     }
 
@@ -86,20 +90,24 @@ public class UserService implements UserDetailsService {
     }
 
     public UserDetailsDTO getUserByEmail(String email) {
-        User user = userRepository.findByEmail(email)
+        var u = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+        return toDto(u);
+    }
 
-        return new UserDetailsDTO(
-                user.getId(),
-                user.getName(),
-                user.getSurname(),
-                user.getDateOfBirth(),
-                user.getGender(),
-                user.getPhoneNumber(),
-                user.getEmail(),
-                user.getLanguage(),
-                user.getCountry()
-        );
+    private UserDetailsDTO toDto(User u) {
+        var dto = new UserDetailsDTO();
+        dto.setId(u.getId());
+        dto.setName(u.getName());
+        dto.setSurname(u.getSurname());
+        dto.setDateOfBirth(u.getDateOfBirth());
+        dto.setGender(u.getGender());
+        dto.setPhoneNumber(u.getPhoneNumber());
+        dto.setEmail(u.getEmail());
+        dto.setLanguage(u.getLanguage());
+        dto.setCountry(u.getCountry());
+        dto.setAvatarUrl(u.getAvatarUrl()); // <-- NEW
+        return dto;
     }
 
 //    public UUID findIdByEmail(String email) {
@@ -129,7 +137,8 @@ public class UserService implements UserDetailsService {
                 user.getPhoneNumber(),
                 user.getEmail(),
                 user.getLanguage(),
-                user.getCountry()
+                user.getCountry(),
+                user.getAvatarUrl()
         );
     }
 
@@ -198,6 +207,21 @@ public class UserService implements UserDetailsService {
         }
 
         return findIdByEmail(principal);
+    }
+
+    @Transactional
+    public void updateAvatarUrl(UUID userId, String url, String requesterEmail) {
+        var u = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Optional guard: only the owner (or admin) can update their avatar
+        if (!requesterEmail.equalsIgnoreCase(u.getEmail())) {
+            // add your own admin/role check if needed
+            throw new AccessDeniedException("Not allowed");
+        }
+
+        u.setAvatarUrl(url);
+        userRepository.save(u);
     }
 
 }

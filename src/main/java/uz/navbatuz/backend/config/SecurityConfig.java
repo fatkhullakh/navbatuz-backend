@@ -46,6 +46,7 @@ public class SecurityConfig {
                                 "/api/services/public/**",
                                 "/api/workers/free-slots/**"   // optional: if you want free-slots without login
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                         .anyRequest().authenticated()
                 )

@@ -24,6 +24,7 @@ public class UserDetailsDTO {
     private String email;
     private Language language;
     private String country;          // if you store it
+    private String avatarUrl;
 
     // getters/setters
 }

@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
 import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
@@ -15,6 +16,8 @@ import uz.navbatuz.backend.user.service.UserService;
 
 import java.security.Principal;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Slf4j
@@ -24,6 +27,7 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService userService;
+    private final CurrentUserService currentUserService;
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/all")
@@ -95,7 +99,21 @@ public class UserController {
     }
 
 
+    record ImageUrlRequest(String url) {}
 
+    @PutMapping("/{id}/avatar")
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN','CUSTOMER')")
+    public ResponseEntity<Void> setAvatar(
+            @PathVariable UUID id,
+            @RequestBody Map<String, String> body,
+            Authentication authentication
+    ) {
+        var url = Objects.toString(body.get("url"), "");
+        if (url.isBlank()) return ResponseEntity.badRequest().build();
+
+        userService.updateAvatarUrl(id, url, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
 
 
 }

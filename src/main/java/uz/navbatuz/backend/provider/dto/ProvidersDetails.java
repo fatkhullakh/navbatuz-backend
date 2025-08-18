@@ -17,6 +17,7 @@ public record ProvidersDetails(
      List<WorkerResponseForService> workers,
      String email,
      String phone,
+        String logoUrl,
      float avgRating,
      List<BusinessHourResponse> businessHours,
         LocationSummary location

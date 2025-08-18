@@ -32,4 +32,5 @@ public class ServiceMapper {
                 service.getWorkers().stream().map(Worker::getId).toList()
         );
     }
+
 }

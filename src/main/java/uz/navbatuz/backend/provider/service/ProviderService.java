@@ -8,7 +8,9 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.location.dto.LocationRequest;
 import uz.navbatuz.backend.location.dto.LocationResponse;
 import uz.navbatuz.backend.location.dto.LocationSummary;
@@ -85,17 +87,17 @@ public class ProviderService {
                 provider.getDescription(),
                 provider.getAvgRating(),
                 provider.getCategory(),
-                toSummary(provider.getLocation())
+                toSummary(provider.getLocation()),
+                provider.getLogoUrl()
         );
     }
 
-    public ProvidersDetails  getProvidersDetails(UUID id) {
-        Provider provider = providerRepository.findById(id)
+    public ProvidersDetails getProvidersDetails(UUID id) {
+        var provider = providerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Provider not found"));
 
-
-        List<WorkerResponseForService> workers = workerRepository.findWorkerResponsesByProviderId(id); // Example
-        List<BusinessHourResponse> businessHours = businessHourRepository.findByProvider_Id(id);
+        var workers = workerRepository.findWorkerResponsesByProviderId(id);
+        var businessHours = businessHourRepository.findByProvider_Id(id);
 
         return new ProvidersDetails(
                 provider.getId(),
@@ -105,6 +107,10 @@ public class ProviderService {
                 workers,
                 provider.getEmail(),
                 provider.getPhoneNumber(),
+
+                // NEW
+                provider.getLogoUrl(),
+
                 provider.getAvgRating(),
                 businessHours,
                 toSummary(provider.getLocation())
@@ -159,7 +165,8 @@ public class ProviderService {
                         p.getDescription(),
                         p.getAvgRating(),
                         p.getCategory(),
-                        toSummary(p.getLocation()) // <-- null-safe
+                        toSummary(p.getLocation()), // <-- null-safe
+                        p.getLogoUrl()
                 ));
     }
 
@@ -171,7 +178,8 @@ public class ProviderService {
                         p.getDescription(),
                         p.getAvgRating(),
                         p.getCategory(),
-                        toSummary(p.getLocation()) // <-- null-safe
+                        toSummary(p.getLocation()), // <-- null-safe
+                        p.getLogoUrl()
                 ))
                 .toList();
     }
@@ -201,7 +209,8 @@ public class ProviderService {
                         p.getDescription(),
                         p.getAvgRating(),
                         p.getCategory(),
-                        toSummary(p.getLocation()) // <-- null-safe
+                        toSummary(p.getLocation()), // <-- null-safe
+                        p.getLogoUrl()
                 ));
     }
 
@@ -382,5 +391,30 @@ public class ProviderService {
     }
 
 
+    @Transactional
+    public Provider updateLogo(UUID providerId, String url, UUID actorId) {
+        Provider p = providerRepository.findById(providerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
+        var actor = userRepository.findById(actorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Actor not found"));
+
+        boolean isOwner = p.getOwner() != null && p.getOwner().getId().equals(actorId);
+        boolean isAdmin = actor.getRole() != null && actor.getRole().name().equals("ADMIN");
+        if (!isOwner && !isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to update this provider");
+        }
+
+        p.setLogoUrl(url);
+        return providerRepository.save(p);
+    }
+
+    @Transactional
+    public void setLogoUrl(UUID providerId, String url /*, String requesterEmail */) {
+        var p = providerRepository.findById(providerId)
+                .orElseThrow(() -> new RuntimeException("Provider not found"));
+        // Optional: verify requester is the owner of this provider
+        p.setLogoUrl(url);
+        providerRepository.save(p);
+    }
 
 }
