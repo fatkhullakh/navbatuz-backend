@@ -9,5 +9,6 @@ public record ProviderResponse(
         String description,
         float avgRating,
         Category category,
-        LocationSummary location // may be null
+        LocationSummary location,
+        String logoUrl// may be null
 ) {}

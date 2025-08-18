@@ -7,14 +7,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.customer.model.Customer;
 import uz.navbatuz.backend.customer.repository.CustomerRepository;
+import uz.navbatuz.backend.location.dto.LocationSummary;
+import uz.navbatuz.backend.provider.dto.ProviderResponse;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 @Slf4j
@@ -38,7 +41,8 @@ public class CustomerService {
                             user.getPhoneNumber(),
                             user.getEmail(),
                             user.getLanguage(),
-                            user.getCountry()
+                            user.getCountry(),
+                            user.getAvatarUrl()
                     );
                 })
                 .toList();
@@ -64,10 +68,45 @@ public class CustomerService {
         customerRepository.save(customer);
     }
 
-    public List<UUID> getFavouriteProviders(String email) {
-        Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(()-> new RuntimeException("Customer not found"));
-        return customer.getFavouriteShops();
+    public List<ProviderResponse> getFavouriteProviders(String email) {
+        Customer customer = customerRepository.findByUserEmail(email)
+                .orElseThrow(() -> new RuntimeException("Customer not found"));
+
+        List<UUID> favIds = Optional.ofNullable(customer.getFavouriteShops()).orElseGet(List::of);
+        if (favIds.isEmpty()) return List.of();
+
+        List<Provider> providers = providerRepository.findAllById(favIds);
+        Map<UUID, Provider> byId = providers.stream()
+                .collect(Collectors.toMap(Provider::getId, Function.identity()));
+
+        return favIds.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private LocationSummary toSummary(uz.navbatuz.backend.location.model.Location loc) {
+        if (loc == null) return null;
+        return new LocationSummary(
+                loc.getId(),
+                loc.getAddressLine1(),
+                loc.getCity(),
+                loc.getCountryIso2()
+        );
+    }
+
+
+    private ProviderResponse toResponse(Provider p) {
+        return new ProviderResponse(
+                p.getId(),
+                p.getName(),
+                p.getDescription(),
+                p.getAvgRating(),
+                p.getCategory(),
+                toSummary(p.getLocation()),
+                p.getLogoUrl()
+        );
     }
 
     public UUID requireCustomerIdByUsername(String username) {

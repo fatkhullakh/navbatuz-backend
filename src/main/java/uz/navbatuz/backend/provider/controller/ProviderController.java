@@ -19,11 +19,9 @@ import uz.navbatuz.backend.location.model.Location;
 import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.service.ProviderService;
+import uz.navbatuz.backend.security.CurrentUserService;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Slf4j
 @RestController
@@ -32,6 +30,7 @@ import java.util.UUID;
 public class ProviderController {
 
     private final ProviderService providerService;
+    private final CurrentUserService currentUserService;
 
     private static LocationSummary toSummary(uz.navbatuz.backend.location.model.Location loc) {
         if (loc == null) return null;
@@ -52,7 +51,8 @@ public class ProviderController {
                 p.getDescription(),
                 p.getAvgRating(),
                 p.getCategory(),
-                toSummary(p.getLocation()) // <-- NULL-SAFE
+                toSummary(p.getLocation()), // <-- NULL-SAFE
+                p.getLogoUrl()
         ));
     }
 
@@ -179,8 +179,36 @@ public class ProviderController {
                 .toList();
     }
 
+    record ImageUrlRequest(String url) {}
+
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PutMapping("/{providerId}/logo")
+    public ResponseEntity<ProviderResponse> setLogo(
+            @PathVariable UUID providerId,
+            @RequestBody ImageUrlRequest req
+    ) {
+        var actorId = currentUserService.getCurrentUserId();
+        var p = providerService.updateLogo(providerId, req.url(), actorId);
+        return ResponseEntity.noContent().build();
+    }
+
+//    @PutMapping("/{id}/logo")
+//    @PreAuthorize("hasAnyRole('OWNER','ADMIN')") // adjust roles as needed
+//    public ResponseEntity<Void> setLogo(
+//            @PathVariable UUID id,
+//            @RequestBody Map<String, String> body
+//            /*, Authentication auth */
+//    ) {
+//        var url = Objects.toString(body.get("url"), "");
+//        if (url.isBlank()) return ResponseEntity.badRequest().build();
+//
+//        providerService.setLogoUrl(id, url /*, auth.getName() */);
+//        return ResponseEntity.noContent().build();
+//    }
+
 
     // localhost:8080/api/providers/public/search?category=CLINIC&page=0&size=5
+
 
 
 }

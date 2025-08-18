@@ -61,6 +61,12 @@ public class Provider {
     @JoinColumn(name = "location_id", nullable = true)
     private Location location;
 
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
     // TODO: Relationship Provider with Receptionist and hasReceptinist method
 //    public boolean hasReceptionist(User currentUser) {
 //

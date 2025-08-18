@@ -29,7 +29,9 @@ public class ServiceMapper {
                 service.getDuration(),
                 service.isActive(),
                 service.getProvider().getId(),
-                service.getWorkers().stream().map(Worker::getId).toList()
+                service.getWorkers().stream().map(Worker::getId).toList(),
+                service.getImageUrl()
         );
     }
+
 }
