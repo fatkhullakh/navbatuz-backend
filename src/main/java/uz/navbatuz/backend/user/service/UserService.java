@@ -224,4 +224,22 @@ public class UserService implements UserDetailsService {
         userRepository.save(u);
     }
 
+    @Transactional
+    public void removeAvatar(UUID userId, String requesterEmail) {
+        var u = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // only the owner (or add admin check if you need)
+        if (!requesterEmail.equalsIgnoreCase(u.getEmail())) {
+            throw new AccessDeniedException("Not allowed");
+        }
+
+        // Minimal: just null out the URL (frontend will hide the image)
+        u.setAvatarUrl(null);
+        userRepository.save(u);
+
+        // If you later want to also delete the file from disk/S3,
+        // you can add best-effort deletion here.
+    }
+
 }

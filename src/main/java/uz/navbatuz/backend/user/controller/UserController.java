@@ -115,5 +115,15 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/{id}/avatar")
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN','CUSTOMER')")
+    public ResponseEntity<Void> removeAvatar(
+            @PathVariable UUID id,
+            Authentication authentication
+    ) {
+        userService.removeAvatar(id, authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
+
 
 }
