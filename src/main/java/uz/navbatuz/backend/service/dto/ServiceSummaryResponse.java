@@ -10,6 +10,7 @@ public record ServiceSummaryResponse(
         UUID id,
         String name,
         Category category,
+        String description,
         BigDecimal price,
         Duration duration
 ) {}

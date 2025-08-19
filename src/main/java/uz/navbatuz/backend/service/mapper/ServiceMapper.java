@@ -14,6 +14,7 @@ public class ServiceMapper {
                 service.getId(),
                 service.getName(),
                 service.getCategory(),
+                service.getDescription(),
                 service.getPrice(),
                 service.getDuration()
         );
