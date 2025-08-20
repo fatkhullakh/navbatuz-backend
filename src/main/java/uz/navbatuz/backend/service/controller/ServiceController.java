@@ -11,6 +11,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
+import uz.navbatuz.backend.service.dto.ServiceDetailedResponse;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
 import uz.navbatuz.backend.service.dto.ServiceSummaryResponse;
 import uz.navbatuz.backend.service.mapper.ServiceMapper;
