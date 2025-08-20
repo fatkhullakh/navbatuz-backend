@@ -33,6 +33,7 @@ import uz.navbatuz.backend.worker.repository.WorkerRepository;
 import javax.management.ServiceNotFoundException;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -74,7 +75,7 @@ public class ServiceService {
         Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
 
-        return serviceRepository.findByProviderIdAndIsActiveTrue(providerId)
+        return serviceRepository.findByProvider_IdAndDeletedFalseAndIsActiveTrue(providerId)
                 .stream()
                 .map(serviceMapper::toSummaryResponse)
                 .toList();
@@ -84,7 +85,7 @@ public class ServiceService {
         Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
 
-        return serviceRepository.findByProviderId(providerId)
+        return serviceRepository.findByProvider_IdAndDeletedFalse(providerId)
                 .stream()
                 .map(serviceMapper::toDetailedResponse)
                 .toList();
@@ -124,28 +125,25 @@ public class ServiceService {
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found"));
 
         List<Worker> workers = workerRepository.findAllById(request.workerIds());
-
         boolean allMatch = workers.stream()
                 .allMatch(w -> w.getProvider().getId().equals(provider.getId()));
-
-        if (!allMatch) {
-            throw new IllegalArgumentException("One or more workers do not belong to the specified provider.");
-        }
+        if (!allMatch) throw new IllegalArgumentException("One or more workers do not belong to the specified provider.");
 
         ServiceEntity service = ServiceEntity.builder()
                 .name(request.name())
                 .description(request.description())
                 .category(request.category())
-                .price(request.price() != null ? java.math.BigDecimal.valueOf(request.price()) : null)
+                .price(BigDecimal.valueOf(request.price()))
                 .duration(request.duration())
                 .provider(provider)
                 .workers(workers)
                 .isActive(true)
+                .deleted(false)
+                .imageUrl(request.imageUrl()) // <- map it
                 .build();
 
         service = serviceRepository.save(service);
-
-        return serviceMapper.toDetailedResponse(service); // return DTO
+        return serviceMapper.toDetailedResponse(service);
     }
 
     @Transactional
@@ -229,10 +227,28 @@ public class ServiceService {
     }
 
 
-    public void deleteServiceById(UUID serviceId) {
-        log.info("Start deleting service with id: {}", serviceId);
-        serviceRepository.deleteById(serviceId);
-        log.info("Successfully deleted service with id: {}", serviceId);
+    @Transactional
+    public void deleteService(UUID serviceId, UUID actorId) {
+        ServiceEntity s = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+
+        User actor = userRepository.findById(actorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Actor not found"));
+
+        UUID ownerId = Optional.ofNullable(s.getProvider())
+                .map(p -> p.getOwner())
+                .map(User::getId)
+                .orElse(null);
+
+        boolean isOwner = ownerId != null && ownerId.equals(actorId);
+        boolean isAdmin = actor.getRole() != null && "ADMIN".equals(actor.getRole().name());
+        if (!isOwner && !isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to delete this service");
+        }
+
+        s.setDeleted(true);
+        s.setActive(false);
+        serviceRepository.save(s);
     }
 
 

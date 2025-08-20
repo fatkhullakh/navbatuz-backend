@@ -15,6 +15,7 @@ public record CreateServiceRequest(
         @Positive Double price,
         @Positive Duration duration,
         @NotNull UUID providerId,
-        @NotNull List<UUID> workerIds
+        @NotNull List<UUID> workerIds,
+        String imageUrl
 ) {}
 

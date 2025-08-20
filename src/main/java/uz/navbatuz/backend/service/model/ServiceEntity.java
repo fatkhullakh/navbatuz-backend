@@ -2,6 +2,8 @@ package uz.navbatuz.backend.service.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLDelete;
+import org.hibernate.annotations.Where;
 import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.worker.model.Worker;
@@ -18,6 +20,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Table(name = "services")
+@SQLDelete(sql = "UPDATE services SET deleted = true, is_active = false WHERE id = ?")
 public class ServiceEntity {
     @Id
     @GeneratedValue
@@ -32,6 +35,9 @@ public class ServiceEntity {
     private BigDecimal price;
     private Duration duration;
     private boolean isActive;
+
+    @Column(name = "deleted", nullable = false)
+    private boolean deleted = false;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "provider_id", nullable = false)

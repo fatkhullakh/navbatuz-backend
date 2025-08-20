@@ -77,7 +77,7 @@ public class ServiceController {
         return ResponseEntity.ok(serviceService.getService(serviceId));
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
     @GetMapping("/provider/all/{providerId}")
     public ResponseEntity<List<ServiceResponse>> getAllServicesByProvider(@PathVariable UUID providerId) {
         List<ServiceResponse> services = serviceService.getAllServicesByProvider(providerId);
@@ -145,9 +145,9 @@ public class ServiceController {
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
     @DeleteMapping("/{serviceId}")
-    public ResponseEntity<Void> deleteService(@PathVariable UUID serviceId) {
-        serviceService.deleteServiceById(serviceId);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Void> delete(@PathVariable UUID serviceId) {
+        serviceService.deleteService(serviceId, currentUserService.getCurrentUserId());
+        return ResponseEntity.noContent().build(); // 204
     }
 
     // localhost:8080/search?category=BARBERSHOP&page=0&size=10
