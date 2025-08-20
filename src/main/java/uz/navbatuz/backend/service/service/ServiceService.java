@@ -8,18 +8,22 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.BadRequestException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
+import uz.navbatuz.backend.service.dto.ServiceDetailedResponse;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
 import uz.navbatuz.backend.service.dto.ServiceSummaryResponse;
 import uz.navbatuz.backend.service.mapper.ServiceMapper;
 import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.service.repository.ServiceRepository;
 import uz.navbatuz.backend.user.model.User;
+import uz.navbatuz.backend.user.repository.UserRepository;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
 import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
 import uz.navbatuz.backend.worker.mapper.WorkerMapper;
@@ -41,6 +45,7 @@ public class ServiceService {
     private final WorkerRepository workerRepository;
     private final ServiceMapper serviceMapper;
     private final WorkerMapper workerMapper;
+    private final UserRepository userRepository;
 
 //    @Transactional
 //    public ServiceResponse create(CreateServiceRequest request) {
@@ -111,6 +116,7 @@ public class ServiceService {
 
         return serviceMapper.toDetailedResponse(serviceEntity);
     }
+
 
     @Transactional
     public ServiceResponse createService(CreateServiceRequest request) {
@@ -275,6 +281,26 @@ public class ServiceService {
                 .stream()
                 .map(serviceMapper::toSummaryResponse)
                 .toList();
+    }
+
+    @Transactional
+    public ServiceEntity updateImage(UUID serviceId, String url, UUID actorId) {
+        ServiceEntity s = serviceRepository.findById(serviceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Service not found"));
+        var actor = userRepository.findById(actorId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Actor not found"));
+
+        var providerOwnerId = s.getProvider() != null && s.getProvider().getOwner() != null
+                ? s.getProvider().getOwner().getId() : null;
+
+        boolean isOwner = providerOwnerId != null && providerOwnerId.equals(actorId);
+        boolean isAdmin = actor.getRole() != null && actor.getRole().name().equals("ADMIN");
+        if (!isOwner && !isAdmin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to update service image");
+        }
+
+        s.setImageUrl(url);
+        return serviceRepository.save(s);
     }
 
 }

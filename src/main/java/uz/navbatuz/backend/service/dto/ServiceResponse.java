@@ -16,6 +16,7 @@ public record ServiceResponse(
         Duration duration,
         boolean isActive,
         UUID providerId,
-        List<UUID> workerIds
+        List<UUID> workerIds,
+        String logoUrl
 ) {}
 

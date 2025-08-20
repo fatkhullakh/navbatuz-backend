@@ -48,6 +48,9 @@ public class User implements UserDetails {
     private Role role;
     private String country;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
     @Override public String getUsername() { return email; }
     @Override public String getPassword() { return passwordHash; }

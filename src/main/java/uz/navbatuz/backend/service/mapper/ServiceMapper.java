@@ -14,6 +14,7 @@ public class ServiceMapper {
                 service.getId(),
                 service.getName(),
                 service.getCategory(),
+                service.getDescription(),
                 service.getPrice(),
                 service.getDuration()
         );
@@ -29,7 +30,9 @@ public class ServiceMapper {
                 service.getDuration(),
                 service.isActive(),
                 service.getProvider().getId(),
-                service.getWorkers().stream().map(Worker::getId).toList()
+                service.getWorkers().stream().map(Worker::getId).toList(),
+                service.getImageUrl()
         );
     }
+
 }

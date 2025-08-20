@@ -57,9 +57,15 @@ public class Provider {
     @JoinColumn(name = "owner_id", updatable = false)
     private User owner;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "location_id")
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "location_id", nullable = true)
     private Location location;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
 
     // TODO: Relationship Provider with Receptionist and hasReceptinist method
 //    public boolean hasReceptionist(User currentUser) {
