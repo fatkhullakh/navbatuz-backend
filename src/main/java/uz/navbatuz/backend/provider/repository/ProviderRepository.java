@@ -32,4 +32,6 @@ public interface ProviderRepository extends JpaRepository<Provider, UUID> {
 
     Page<Provider> findByIsActiveTrue(Pageable pageable);
 
+    Optional<Provider> findByOwnerId(UUID ownerId);
+
 }

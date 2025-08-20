@@ -11,6 +11,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import uz.navbatuz.backend.common.Role;
 import uz.navbatuz.backend.location.dto.LocationRequest;
 import uz.navbatuz.backend.location.dto.LocationResponse;
 import uz.navbatuz.backend.location.dto.LocationSummary;
@@ -31,6 +32,8 @@ import uz.navbatuz.backend.worker.repository.WorkerRepository;
 
 import java.time.DayOfWeek;
 import java.util.*;
+
+import static uz.navbatuz.backend.common.Role.OWNER;
 
 @Slf4j
 @Service
@@ -415,6 +418,33 @@ public class ProviderService {
         // Optional: verify requester is the owner of this provider
         p.setLogoUrl(url);
         providerRepository.save(p);
+    }
+
+    public UUID getProviderIdForOwner(UUID userId) {
+        return providerRepository.findByOwnerId(userId)
+                .orElseThrow(() -> new RuntimeException("Provider not found for owner"))
+                .getId();
+    }
+
+//    public UUID getProviderIdForReceptionist(UUID userId) {
+//        return receptionistRepository.findByReceptionistId(userId)
+//                .orElseThrow(() -> new RuntimeException("Provider not found for receptionist"))
+//                .getProvider().getId();
+//    }
+//
+//    public UUID getProviderIdForWorker(UUID userId) {
+//        return workerRepository.findByWorkerId(userId)
+//                .orElseThrow(() -> new RuntimeException("Provider not found for worker"))
+//                .getProvider().getId();
+//    }
+
+    public UUID getProviderIdForUser(UUID userId, Role role) {
+        return switch (role) {
+            case OWNER -> getProviderIdForOwner(userId);
+            //case RECEPTIONIST -> getProviderIdForReceptionist(userId);
+            //case WORKER -> getProviderIdForWorker(userId);
+            default -> throw new IllegalStateException("Role not linked to provider: " + role);
+        };
     }
 
 }

@@ -16,6 +16,7 @@ import uz.navbatuz.backend.common.Category;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.service.dto.CreateServiceRequest;
+import uz.navbatuz.backend.service.dto.ServiceDetailedResponse;
 import uz.navbatuz.backend.service.dto.ServiceResponse;
 import uz.navbatuz.backend.service.dto.ServiceSummaryResponse;
 import uz.navbatuz.backend.service.mapper.ServiceMapper;
@@ -115,6 +116,7 @@ public class ServiceService {
 
         return serviceMapper.toDetailedResponse(serviceEntity);
     }
+
 
     @Transactional
     public ServiceResponse createService(CreateServiceRequest request) {

@@ -192,6 +192,15 @@ public class ProviderController {
         return ResponseEntity.noContent().build();
     }
 
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER')")
+    @GetMapping("/me")
+    public ResponseEntity<ProviderResponse> getMyProvider() {
+        var userId = currentUserService.getCurrentUserId();
+        var role = currentUserService.getCurrentUserRole(); // implement this in CurrentUserService
+        var providerId = providerService.getProviderIdForUser(userId, role);
+        return ResponseEntity.ok(providerService.getById(providerId));
+    }
+
 //    @PutMapping("/{id}/logo")
 //    @PreAuthorize("hasAnyRole('OWNER','ADMIN')") // adjust roles as needed
 //    public ResponseEntity<Void> setLogo(
