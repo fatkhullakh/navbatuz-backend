@@ -4,6 +4,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.appointment.model.Appointment;
@@ -25,9 +26,7 @@ import uz.navbatuz.backend.security.AuthorizationService;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
-import uz.navbatuz.backend.worker.dto.CreateWorkerRequest;
-import uz.navbatuz.backend.worker.dto.WorkerResponse;
-import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.dto.*;
 import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
@@ -89,6 +88,14 @@ public class WorkerService {
                 .build();
 
         return workerRepository.save(worker);
+    }
+
+    public ResponseEntity<WorkerDetailsDto> getWorker(UUID workerId) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"));
+
+        WorkerDetailsDto dto = workerMapper.mapToDetails(worker);
+        return ResponseEntity.ok(dto);
     }
 
 
@@ -191,6 +198,7 @@ public class WorkerService {
 //        plannedAvailabilityRepository.saveAll(entries);
 //    }
 
+
     @Transactional
     public void setBreak(UUID workerId, List<BreakRequest> requests) {
         Worker worker = workerRepository.findById(workerId)
@@ -220,37 +228,94 @@ public class WorkerService {
         breakRepository.saveAll(breaks);
     }
 
+    @Transactional
+    public void setBreakDaily(UUID workerId, BreakRequest req) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new RuntimeException("Unauthorized access to modify worker");
+        }
+
+        if (req == null || !req.isValid()) {
+            throw new IllegalArgumentException("Invalid range: " + (req == null ? null : req.date()));
+        }
+
+        // optional: reject overlaps on the same day
+        if (breakRepository.existsOverlap(workerId, req.date(), req.startTime(), req.endTime())) {
+            throw new IllegalArgumentException("Break overlaps an existing break");
+        }
+
+        Break entity = Break.builder()
+                .worker(worker)
+                .date(req.date())
+                .startTime(req.startTime())
+                .endTime(req.endTime())
+                .build();
+
+        breakRepository.save(entity);
+    }
+
+    @Transactional
+    public void deleteBreak(UUID workerId, Long breakId) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new RuntimeException("Unauthorized access to modify worker");
+        }
+
+        int deleted = breakRepository.deleteByIdAndWorkerId(breakId, workerId);
+        if (deleted == 0) {
+            throw new RuntimeException("Break not found");
+        }
+    }
+
     public List<BreakResponse> getBreaks(UUID workerId, LocalDate from, LocalDate to) {
         return breakRepository.findByWorkerIdAndDateBetween(workerId, from, to);
     }
 
     @Transactional
-    public void setActualAvailability(UUID workerId, List<ActualAvailabilityRequest> requests) {
+    public void setActualAvailability(UUID workerId, ActualAvailabilityRequest req) {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
         User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new RuntimeException("Unauthorized access to modify worker");
+        }
+        if (req == null || !req.isValid()) {
+            throw new IllegalArgumentException("Invalid range: " + (req == null ? null : req.date()));
+        }
 
+        // One per date: update if exists, else create
+        Optional<ActualAvailability> existing =
+                actualAvailabilityRepository.findByWorkerIdAndDate(workerId, req.date());
+
+        ActualAvailability entity = existing.orElseGet(ActualAvailability::new);
+        entity.setWorker(worker);
+        entity.setDate(req.date());
+        entity.setStartTime(req.startTime());
+        entity.setEndTime(req.endTime());
+        entity.setBufferBetweenAppointments(req.bufferBetweenAppointments());
+
+        actualAvailabilityRepository.save(entity);
+    }
+
+    @Transactional
+    public void deleteActualAvailability(UUID workerId, Long availabilityId) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+        User currentUser = userRepository.getReferenceById(currentUserService.getCurrentUserId());
         if (!authorizationService.canModifyWorker(currentUser, worker)) {
             throw new RuntimeException("Unauthorized access to modify worker");
         }
 
-        actualAvailabilityRepository.deleteByWorkerIdAndDateIn(workerId, requests.stream().map(ActualAvailabilityRequest::date).toList());
-
-        List<ActualAvailability> list = new ArrayList<>();
-        for (ActualAvailabilityRequest req : requests) {
-            if (!req.isValid())
-                throw new IllegalArgumentException("Invalid range: " + req.date());
-
-            list.add(ActualAvailability.builder()
-                    .worker(worker)
-                    .date(req.date())
-                    .startTime(req.startTime())
-                    .endTime(req.endTime())
-                    .bufferBetweenAppointments(req.bufferBetweenAppointments())
-                    .build());
-        }
-        actualAvailabilityRepository.saveAll(list);
+        int deleted = actualAvailabilityRepository.deleteByIdAndWorkerId(availabilityId, workerId);
+        if (deleted == 0) throw new RuntimeException("Actual availability not found");
     }
 
     public List<ActualAvailabilityResponse> getActualAvailability(UUID workerId, LocalDate from, LocalDate to) {
@@ -404,5 +469,38 @@ public class WorkerService {
         return workerRepository.findById(workerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"))
                 .getProvider().getId();
+    }
+
+    @Transactional
+    public WorkerDetailsDto updateWorker(UUID workerId, UpdateWorkerRequest req) {
+        Worker worker = workerRepository.findById(workerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found"));
+
+        UUID currentUserId = currentUserService.getCurrentUserId();
+        User currentUser = userRepository.getReferenceById(currentUserId);
+        if (!authorizationService.canModifyWorker(currentUser, worker)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Forbidden");
+        }
+
+        // Update User fields
+        User u = worker.getUser();
+        if (req.name() != null)       u.setName(req.name().trim());
+        if (req.surname() != null)    u.setSurname(req.surname().trim());
+        if (req.gender() != null)     u.setGender(req.gender());
+        if (req.phoneNumber() != null)u.setPhoneNumber(req.phoneNumber().trim());
+        if (req.email() != null)      u.setEmail(req.email().trim());
+        if (req.avatarUrl() != null)  u.setAvatarUrl(req.avatarUrl().trim());
+
+        // Update Worker fields
+        if (req.workerType() != null) worker.setWorkerType(req.workerType());
+        if (req.status() != null)     worker.setStatus(req.status());
+        if (req.isActive() != null)   worker.setActive(req.isActive());
+
+        // Persist
+        userRepository.save(u);
+        workerRepository.save(worker);
+
+        // Return full details
+        return workerMapper.mapToDetails(worker);
     }
 }

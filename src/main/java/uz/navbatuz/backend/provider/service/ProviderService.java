@@ -120,29 +120,26 @@ public class ProviderService {
         );
     }
 
-    public void updateById(UUID id, ProviderRequest request) {
+    public void updateById(UUID id, ProviderUpdateRequest request) {
         Provider provider = providerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Provider not found"));
 
-        providerRepository.findByEmail(request.getEmail()).ifPresent((Provider existing) -> {
+        providerRepository.findByEmail(request.email()).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
                 throw new IllegalArgumentException("A provider with this email already exists.");
             }
         });
-
-        providerRepository.findByPhoneNumber(request.getPhoneNumber()).ifPresent((Provider existing) -> {
+        providerRepository.findByPhoneNumber(request.phoneNumber()).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
                 throw new IllegalArgumentException("A provider with this phone number already exists.");
             }
         });
 
-
-        provider.setName(request.getName());
-        provider.setDescription(request.getDescription());
-        provider.setCategory(request.getCategory());
-        provider.setTeamSize(request.getTeamSize());
-        provider.setEmail(request.getEmail());
-        provider.setPhoneNumber(request.getPhoneNumber());
+        provider.setName(request.name());
+        provider.setDescription(request.description());
+        provider.setCategory(request.category());
+        provider.setEmail(request.email());
+        provider.setPhoneNumber(request.phoneNumber());
 
         providerRepository.save(provider);
     }

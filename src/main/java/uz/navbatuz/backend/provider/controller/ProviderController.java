@@ -108,10 +108,11 @@ public class ProviderController {
         return ResponseEntity.ok(providerService.getAllProviders());
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
     @Transactional
     @PutMapping("/{id}")
-    public ResponseEntity<Void> update(@PathVariable UUID id, @Valid @RequestBody ProviderRequest request) {
+    public ResponseEntity<Void> update(@PathVariable UUID id,
+                                       @Valid @RequestBody ProviderUpdateRequest request) {
         providerService.updateById(id, request);
         return ResponseEntity.noContent().build();
     }

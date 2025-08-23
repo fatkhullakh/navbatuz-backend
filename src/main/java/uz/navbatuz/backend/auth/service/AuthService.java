@@ -44,15 +44,20 @@ public class AuthService {
     Uses passwordEncoder.encode() to hash the password (never store raw passwords).
     Sets isActive = true.
      */
-    public AuthResponse register(RegisterRequest request) {
-        
+    public WorkerRegisterResponse register(RegisterRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already in use");
         }
-
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
             throw new RuntimeException("Phone number already in use");
         }
+
+        // Safe defaults to avoid NPEs
+        Language lang = request.getLanguage() != null ? request.getLanguage() : Language.RU;
+        String country = (request.getCountry() != null && !request.getCountry().isBlank())
+                ? request.getCountry().trim().toUpperCase() : "UZ";
+
         User user = User.builder()
                 .name(request.getName())
                 .surname(request.getSurname())
@@ -63,10 +68,12 @@ public class AuthService {
                 .phoneNumber(request.getPhoneNumber())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .isActive(true)
-                .language(request.getLanguage())
+                .language(lang)
+                .country(country)
                 .role(request.getRole())
                 .build();
-        user = userRepository.save(user); // save & attach to persistence context
+
+        user = userRepository.save(user);// save & attach to persistence context
 
         // Step 2: Create Customer only if role is CUSTOMER and it doesn't exist
         if (request.getRole() == Role.CUSTOMER && !customerRepository.existsById(user.getId())) {
@@ -90,8 +97,7 @@ public class AuthService {
 
         // Step 4: Return token
         String token = jwtService.generateToken(user);
-        return new AuthResponse(token);
-
+        return new WorkerRegisterResponse(token, user.getId());
     }
 
 

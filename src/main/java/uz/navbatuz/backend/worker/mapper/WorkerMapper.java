@@ -2,6 +2,7 @@ package uz.navbatuz.backend.worker.mapper;
 
 import org.springframework.stereotype.Component;
 import uz.navbatuz.backend.user.model.User;
+import uz.navbatuz.backend.worker.dto.WorkerDetailsDto;
 import uz.navbatuz.backend.worker.dto.WorkerResponse;
 import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
 import uz.navbatuz.backend.worker.model.Worker;
@@ -27,6 +28,24 @@ public class WorkerMapper {
                 worker.getAvgRating(),
                 worker.getHireDate(),
                 worker.isActive()
+        );
+    }
+
+    public WorkerDetailsDto mapToDetails(Worker worker) {
+        User user = worker.getUser();
+        return new WorkerDetailsDto(
+                worker.getId(),
+                user.getName() + " " + user.getSurname(),
+                worker.getProvider().getName(),
+                user.getGender(),
+                user.getPhoneNumber(),
+                user.getEmail(),
+                worker.getWorkerType(),
+                worker.getStatus(),
+                worker.getAvgRating(),
+                worker.getHireDate(),
+                worker.isActive(),
+                user.getAvatarUrl()
         );
     }
 }
