@@ -126,5 +126,14 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.getCustomerAppointments1(customerId));
     }
 
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
+    @GetMapping("/worker/{workerId}/day")
+    public ResponseEntity<List<AppointmentResponse>> getWorkerDay(
+            @PathVariable UUID workerId,
+            @RequestParam LocalDate date
+    ) {
+        return ResponseEntity.ok(appointmentService.getWorkerAppointmentsDay(workerId, date));
+    }
+
     //TODO: Book again feature
 }

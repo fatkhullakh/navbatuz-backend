@@ -36,10 +36,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -346,6 +343,16 @@ public class AppointmentService {
                 .changedBy(user)
                 .build();
         historyRepository.save(history);
+    }
+
+    public List<AppointmentResponse> getWorkerAppointmentsDay(UUID workerId, LocalDate date) {
+        // Include every status so the day view can show cancelled/completed past events too.
+        var statuses = EnumSet.allOf(AppointmentStatus.class);
+        return appointmentRepository
+                .findByWorkerIdAndDateAndStatusInOrderByStartTime(workerId, date, statuses)
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
 }

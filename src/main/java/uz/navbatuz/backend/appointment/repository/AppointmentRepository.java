@@ -9,10 +9,7 @@ import uz.navbatuz.backend.common.AppointmentStatus;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, UUID> {
     boolean existsByWorkerIdAndDateAndStartTimeAndStatusIn(
@@ -27,8 +24,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     List<Appointment> findByWorkerIdAndDateAfter(UUID workerId, LocalDate date);
 
+    List<Appointment> findByWorkerIdAndDateAndStatusInOrderByStartTime(UUID workerId, LocalDate date, Set<AppointmentStatus> statuses);
 
-//    @Query("""
+    //    @Query("""
 //       select a
 //       from Appointment a
 //       where a.customer.id = :userId or a.worker.id = :userId
