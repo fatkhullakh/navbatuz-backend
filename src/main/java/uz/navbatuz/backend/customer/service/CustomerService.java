@@ -118,4 +118,18 @@ public class CustomerService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"))
                 .getId();
     }
+
+
+    private String normalizePhone(String s) {
+        if (s == null) return null;
+        s = s.replaceAll("[\\s\\-()]", "");
+        if (!s.startsWith("+")) s = "+" + s;
+        return s;
+    }
+
+    public Optional<UUID> findCustomerIdByPhoneE164(String raw) {
+        final String p = normalizePhone(raw);
+        if (p == null || p.isBlank()) return Optional.empty();
+        return customerRepository.findByUserPhone(p).map(Customer::getId);
+    }
 }

@@ -37,27 +37,44 @@ public class AppointmentController {
     @PreAuthorize("hasAnyRole('CUSTOMER','OWNER','RECEPTIONIST','WORKER','ADMIN')")
     @PostMapping
     public ResponseEntity<AppointmentResponse> book(@RequestBody AppointmentRequest req, Authentication auth) {
-        boolean isCustomer = auth.getAuthorities().stream()
+
+        boolean isCustomerRole = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_CUSTOMER"));
 
         UUID effectiveCustomerId = null;
         UUID effectiveGuestId = null;
 
-        if (isCustomer) {
+        if (isCustomerRole) {
+            // Customer booking for self
             effectiveCustomerId = customerService.requireCustomerIdByUsername(auth.getName());
         } else {
-            if (req.guestId() != null) {
+            // Staff booking
+            if (req.customerId() != null) {
+                // explicitly chosen customer from UI
+                effectiveCustomerId = req.customerId();
+            } else if (req.guestId() != null) {
+                // explicitly chosen guest
                 effectiveGuestId = req.guestId();
             } else if (req.guestPhone() != null && !req.guestPhone().isBlank()) {
-                var providerId = workerService.requireProviderId(req.workerId());
-                UUID actorUserId = currentUserService.getCurrentUserId();
-                var guest = guestService.findOrCreate(
-                        providerId, req.guestPhone(), req.guestName(),
-                        actorUserId, auth.getAuthorities().iterator().next().getAuthority()
-                );
-                effectiveGuestId = guest.getId();
+                // Staff typed a phone: if that phone belongs to a registered customer -> book as CUSTOMER
+                var maybeCust = customerService.findCustomerIdByPhoneE164(req.guestPhone());
+                if (maybeCust.isPresent()) {
+                    effectiveCustomerId = maybeCust.get();
+                } else {
+                    // otherwise create/find a Guest for this provider
+                    var providerId = workerService.requireProviderId(req.workerId());
+                    UUID actorUserId = currentUserService.getCurrentUserId();
+                    var guest = guestService.findOrCreate(
+                            providerId,
+                            req.guestPhone(),            // guestService should normalize
+                            req.guestName(),
+                            actorUserId,
+                            auth.getAuthorities().iterator().next().getAuthority()
+                    );
+                    effectiveGuestId = guest.getId();
+                }
             } else {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide guestId or guestPhone");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Provide customerId OR guestId OR guestPhone");
             }
         }
 
@@ -71,9 +88,7 @@ public class AppointmentController {
         );
 
         UUID actorUserId = currentUserService.getCurrentUserId();
-        var resp = appointmentService.book(
-                normalized, actorUserId
-        );
+        var resp = appointmentService.book(normalized, actorUserId);
         return ResponseEntity.status(HttpStatus.CREATED).body(resp);
     }
 
@@ -124,6 +139,47 @@ public class AppointmentController {
         String email = auth.getName();                   // comes from JWT principal
         UUID customerId = userService.findIdByEmail(email); // implement below
         return ResponseEntity.ok(appointmentService.getCustomerAppointments1(customerId));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
+    @GetMapping("/worker/{workerId}/day")
+    public ResponseEntity<List<AppointmentResponse>> getWorkerDay(
+            @PathVariable UUID workerId,
+            @RequestParam LocalDate date
+    ) {
+        return ResponseEntity.ok(appointmentService.getWorkerAppointmentsDay(workerId, date));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
+    @GetMapping("/worker/{workerId}/day/staff")
+    public ResponseEntity<List<AppointmentResponseStaff>> getWorkerDayStaff(
+            @PathVariable UUID workerId,
+            @RequestParam LocalDate date
+    ) {
+        return ResponseEntity.ok(appointmentService.getWorkerAppointmentsDayStaff(workerId, date));
+    }
+
+    // new staff details endpoint
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
+    @GetMapping("/{appointmentId}/staff")
+    public ResponseEntity<AppointmentDetailsStaff> getAppointmentDetailsStaff(
+            @PathVariable UUID appointmentId
+    ) {
+        return ResponseEntity.ok(appointmentService.getAppointmentDetailsStaff(appointmentId));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
+    @PutMapping("/{appointmentId}/no-show")
+    public ResponseEntity<Void> markNoShow(@PathVariable UUID appointmentId) {
+        appointmentService.markNoShow(appointmentId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
+    @PutMapping("/{appointmentId}/undo-no-show")
+    public ResponseEntity<Void> undoNoShow(@PathVariable UUID appointmentId) {
+        appointmentService.undoNoShow(appointmentId);
+        return ResponseEntity.ok().build();
     }
 
     //TODO: Book again feature
