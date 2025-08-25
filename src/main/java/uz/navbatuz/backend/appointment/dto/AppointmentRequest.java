@@ -10,6 +10,7 @@ public record AppointmentRequest (
         LocalDate date,
         LocalTime startTime,
 
+        UUID customerId, //nullable
         UUID guestId,      // staff: reuse existing guest
         String guestPhone, // staff: create/reuse by phone (provider-scoped)
         String guestName

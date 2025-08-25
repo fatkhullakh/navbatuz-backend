@@ -40,6 +40,10 @@ public class ProviderClientService {
                                       String fallbackName,
                                       String fallbackPhone,
                                       UUID actorUserId) {
+        if (isWalkIn(customer, guest, fallbackName, fallbackPhone)) {
+            return; // ← do NOT insert/update provider_clients for walk-ins
+        }
+
         final var now = LocalDateTime.now();
 
         final String phone = normalizePhone(
@@ -47,19 +51,17 @@ public class ProviderClientService {
                         : guest != null ? guest.getPhoneNumber()
                         : fallbackPhone
         );
-        if (phone == null || phone.isBlank()) return; // nothing to index
+        if (phone == null || phone.isBlank()) return;
 
         final String name = (customer != null) ? customer.getUser().getName()
                 : (guest != null) ? guest.getName()
                 : fallbackName;
 
-        var existing = repo.findByProviderIdAndPhoneE164(provider.getId(), phone)
-                .orElse(null);
+        var existing = repo.findByProviderIdAndPhoneE164(provider.getId(), phone).orElse(null);
         if (existing == null) {
             var pc = ProviderClient.builder()
                     .provider(provider)
-                    .personType(customer != null ? ProviderClient.PersonType.CUSTOMER
-                            : ProviderClient.PersonType.GUEST)
+                    .personType(customer != null ? ProviderClient.PersonType.CUSTOMER : ProviderClient.PersonType.GUEST)
                     .customerId(customer != null ? customer.getId() : null)
                     .guestId(guest != null ? guest.getId() : null)
                     .name(name)
@@ -71,7 +73,6 @@ public class ProviderClientService {
                     .build();
             repo.save(pc);
         } else {
-            // keep earliest createdAt/createdBy; update linkage/name if better
             if (existing.getCustomerId() == null && customer != null) {
                 existing.setPersonType(ProviderClient.PersonType.CUSTOMER);
                 existing.setCustomerId(customer.getId());
@@ -86,6 +87,23 @@ public class ProviderClientService {
             repo.save(existing);
         }
     }
+
+    private boolean isWalkIn(Customer customer, Guest guest, String fallbackName, String fallbackPhone) {
+        // name hint
+        final String name = (customer != null && customer.getUser() != null) ? customer.getUser().getName()
+                : (guest != null ? guest.getName() : fallbackName);
+        if (name != null && name.trim().equalsIgnoreCase("walk-in")) return true;
+
+        // phone hint
+        final String rawPhone = (customer != null && customer.getUser() != null) ? customer.getUser().getPhoneNumber()
+                : (guest != null ? guest.getPhoneNumber() : fallbackPhone);
+        final String e164 = normalizePhone(rawPhone);
+        if (e164 == null || e164.isBlank()) return true;       // no phone → treat as walk-in
+        if (e164.startsWith("+888")) return true;               // old placeholder
+        if (e164.equals("+000000000000")) return true;          // new placeholder
+        return false;
+    }
+
 
     @Transactional(readOnly = true)
     public List<ProviderClientResponse> search(UUID providerId, String q) {

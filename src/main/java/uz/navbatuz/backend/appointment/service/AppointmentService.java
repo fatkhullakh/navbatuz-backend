@@ -59,6 +59,7 @@ public class AppointmentService {
 
     private static final int RESCHEDULE_MIN_LEAD_MINUTES = 120;
     private static final int CANCEL_MIN_LEAD_MINUTES     = 120;
+    private static final int NO_SHOW_GRACE_MINUTES = 5;
 
     private static final java.util.Set<AppointmentStatus> BLOCKING_STATUSES =
             java.util.EnumSet.of(AppointmentStatus.BOOKED, AppointmentStatus.RESCHEDULED);
@@ -194,17 +195,6 @@ public class AppointmentService {
         return toResponse(appt);
     }
 
-//    public List<AppointmentResponse> getWorkerAppointments(UUID workerId, LocalDate date, AppointmentStatus status) {
-//        return appointmentRepository.findByWorkerIdAndDateAndStatusIn(workerId, date, status)
-//                .stream().map(this::toResponse).toList();
-//    }
-
-//    public List<AppointmentResponse> getUpcomingWorkerAppointments(UUID workerId, LocalDate date) {
-//        return appointmentRepository.findByWorkerIdAndDateAfter(workerId, date)
-//                .stream()
-//                .map(this::mapToResponse)
-//                .toList();
-//    }
 
     public AppointmentResponse getAppointment(UUID appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
@@ -353,6 +343,145 @@ public class AppointmentService {
                 .stream()
                 .map(this::toResponse)
                 .toList();
+    }
+
+    private String maskPhone(String p) {
+        if (p == null || p.isBlank()) return null;
+        return (p.length() < 4) ? "***" : "********" + p.substring(p.length() - 4);
+    }
+
+    private String extractCustomerName(Appointment a) {
+        if (a.getCustomer() != null && a.getCustomer().getUser() != null) {
+            var n = a.getCustomer().getUser().getName();
+            if (n != null && !n.isBlank()) return n;
+        }
+        if (a.getGuest() != null) {
+            var p = a.getGuest().getPhoneNumber();
+            if (p != null && (p.equals("+000000000000") || p.startsWith("+888"))) {
+                return "Walk-in"; // backend default; UI will localize
+            }
+            var gn = a.getGuest().getName();
+            if (gn != null && !gn.isBlank()) return gn;
+            var m = maskPhone(p);
+            if (m != null) return "Guest " + m;
+        }
+        return "Walk-in"; // final fallback
+    }
+
+
+    private AppointmentResponseStaff toStaffResponse(Appointment a) {
+        String guestMask = (a.getGuest() != null) ? maskPhone(a.getGuest().getPhoneNumber()) : null;
+        return new AppointmentResponseStaff(
+                a.getId(),
+                a.getWorker().getId(),
+                a.getWorker().getProvider().getId(),
+                a.getService().getId(),
+                a.getDate(),
+                a.getStartTime(),
+                a.getEndTime(),
+                a.getStatus(),
+                a.getWorker().getUser() != null ? a.getWorker().getUser().getName() : null,
+                a.getWorker().getProvider().getName(),
+                a.getService().getName(),
+                extractCustomerName(a),
+                guestMask
+        );
+    }
+
+    public java.util.List<AppointmentResponseStaff> getWorkerAppointmentsDayStaff(UUID workerId, LocalDate date) {
+        var statuses = java.util.EnumSet.allOf(uz.navbatuz.backend.common.AppointmentStatus.class);
+        return appointmentRepository
+                .findByWorkerIdAndDateAndStatusInOrderByStartTime(workerId, date, statuses)
+                .stream()
+                .map(this::toStaffResponse)
+                .toList();
+    }
+
+    public AppointmentDetailsStaff getAppointmentDetailsStaff(UUID appointmentId) {
+        var a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+
+        String customerName = extractCustomerName(a);
+        String phone = null;
+        String avatar = null;
+
+        if (a.getCustomer() != null && a.getCustomer().getUser() != null) {
+            var u = a.getCustomer().getUser();
+            phone = (u.getPhoneNumber() != null && !u.getPhoneNumber().isBlank()) ? u.getPhoneNumber() : null;
+            avatar = (u.getAvatarUrl() != null && !u.getAvatarUrl().isBlank()) ? u.getAvatarUrl() : null;
+        } else if (a.getGuest() != null) {
+            phone = a.getGuest().getPhoneNumber();
+            // if Guest has avatar, use it; otherwise null
+        }
+
+        return new AppointmentDetailsStaff(
+                a.getId(),
+                a.getDate(),
+                a.getStartTime(),
+                a.getEndTime(),
+                a.getStatus(),
+                a.getWorker().getUser() != null ? a.getWorker().getUser().getName() : null,
+                a.getWorker().getProvider().getName(),
+                a.getService().getName(),
+                customerName,
+                phone,
+                avatar
+        );
+    }
+
+    @Transactional
+    public void markNoShow(UUID appointmentId) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+
+        User currentUser = getCurrentUser();
+        if (!hasPermissionToModify(a, currentUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to mark no-show");
+        }
+
+        // Only BOOKED or COMPLETED can become NO_SHOW
+        if (a.getStatus() != AppointmentStatus.BOOKED && a.getStatus() != AppointmentStatus.COMPLETED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only booked or completed appointments can be marked no-show");
+        }
+
+        // Too early: only after start time + grace
+        LocalDateTime threshold = LocalDateTime.of(a.getDate(), a.getStartTime())
+                .plusMinutes(NO_SHOW_GRACE_MINUTES);
+        if (LocalDateTime.now().isBefore(threshold)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Too early to mark no-show (" + NO_SHOW_GRACE_MINUTES + " min grace)");
+        }
+
+        AppointmentStatus old = a.getStatus();
+        a.setStatus(AppointmentStatus.NO_SHOW);
+        appointmentRepository.save(a);
+        logStatusChange(a, old, AppointmentStatus.NO_SHOW);
+    }
+
+    @Transactional
+    public void undoNoShow(UUID appointmentId) {
+        Appointment a = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Appointment not found"));
+
+        User currentUser = getCurrentUser();
+        if (!hasPermissionToModify(a, currentUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not allowed to undo no-show");
+        }
+
+        if (a.getStatus() != AppointmentStatus.NO_SHOW) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only no-show appointments can be undone");
+        }
+
+        // If appointment already ended, restore to COMPLETED; otherwise back to BOOKED.
+        LocalDateTime end = LocalDateTime.of(a.getDate(), a.getEndTime());
+        AppointmentStatus newStatus = LocalDateTime.now().isAfter(end)
+                ? AppointmentStatus.COMPLETED
+                : AppointmentStatus.BOOKED;
+
+        AppointmentStatus old = a.getStatus();
+        a.setStatus(newStatus);
+        appointmentRepository.save(a);
+        logStatusChange(a, old, newStatus);
     }
 
 }
