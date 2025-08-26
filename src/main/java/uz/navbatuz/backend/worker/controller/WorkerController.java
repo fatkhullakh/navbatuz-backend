@@ -170,4 +170,10 @@ public class WorkerController {
     ) {
         return ResponseEntity.ok(workerService.updateWorker(workerId, req));
     }
+
+    @PreAuthorize("hasAnyRole('WORKER','OWNER','RECEPTIONIST','ADMIN')")
+    @GetMapping("/me")
+    public ResponseEntity<WorkerDetailsDto> me() {
+        return workerService.getCurrentWorker();
+    }
 }

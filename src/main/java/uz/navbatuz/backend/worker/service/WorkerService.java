@@ -503,4 +503,11 @@ public class WorkerService {
         // Return full details
         return workerMapper.mapToDetails(worker);
     }
+
+    public ResponseEntity<WorkerDetailsDto> getCurrentWorker() {
+        var uid = currentUserService.getCurrentUserId();
+        var worker = workerRepository.findByUserId(uid)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Worker not found for current user"));
+        return ResponseEntity.ok(workerMapper.mapToDetails(worker));
+    }
 }
