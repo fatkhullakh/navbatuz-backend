@@ -36,6 +36,11 @@ public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
 
     List<ServiceEntity> findByProvider_IdAndDeletedFalseAndIsActiveTrue(UUID providerId);
 
+    // in ServiceRepository.java
+    List<ServiceEntity> findByWorkers_IdAndDeletedFalse(UUID workerId);
+
+    List<ServiceEntity> findByWorkers_IdAndDeletedFalseAndIsActiveTrue(UUID workerId);
+
     @Query("""
     SELECT s FROM ServiceEntity s
     WHERE s.isActive = true
