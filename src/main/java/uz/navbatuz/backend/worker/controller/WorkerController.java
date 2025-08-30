@@ -176,4 +176,11 @@ public class WorkerController {
     public ResponseEntity<WorkerDetailsDto> me() {
         return workerService.getCurrentWorker();
     }
+
+
+    @GetMapping("/public/{workerId}/details")
+    public ResponseEntity<WorkerPublicDetailsDto> getWorkerPublic(@PathVariable UUID workerId) {
+        Worker w = workerService.getByIdOrThrow(workerId);
+        return ResponseEntity.ok(workerMapper.mapToPublicDetails(w));
+    }
 }

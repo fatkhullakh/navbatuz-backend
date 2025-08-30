@@ -8,6 +8,7 @@ import uz.navbatuz.backend.customer.model.Customer;
 import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.worker.model.Worker;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -55,4 +56,5 @@ public class Appointment {
 
     @Column(name = "created_by_user")
     private java.util.UUID createdByUser;
+
 }

@@ -50,7 +50,8 @@ public class Provider {
     public void preUpdate() {
         data_updated = LocalDateTime.now();
     }
-    private float avgRating;
+    private Float avgRating;
+    private Long reviewsCount;
     boolean isActive;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -66,6 +67,9 @@ public class Provider {
 
     public String getLogoUrl() { return logoUrl; }
     public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
+    @Column(name = "min_advance_booking_minutes")
+    private Integer minAdvanceBookingMinutes;
 
     // TODO: Relationship Provider with Receptionist and hasReceptinist method
 //    public boolean hasReceptionist(User currentUser) {
