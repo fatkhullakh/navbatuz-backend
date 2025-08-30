@@ -38,7 +38,8 @@ public class Worker {
     private Status status;
     private LocalDate hireDate;
     private LocalDate terminationDate;
-    private float avgRating;
+    private Float avgRating;
+    private Long reviewsCount;
     private boolean isActive;
 
     @ManyToMany(mappedBy = "workers")
