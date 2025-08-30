@@ -30,6 +30,9 @@ public class Appointment {
     @GeneratedValue
     private UUID id;
 
+    @Version
+    private Long version;
+
     @ManyToOne
     @JoinColumn(name = "worker_id")
     private Worker worker;

@@ -22,6 +22,10 @@ public class Provider {
     @Id
     @GeneratedValue
     private UUID id;
+
+    @Version
+    private Long version;
+
     private String name;
     private String description;
 

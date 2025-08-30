@@ -23,6 +23,7 @@ public class Worker {
     private UUID id;
 
     @Version
+    @Column(nullable = false)
     private Long version;
 
     @OneToOne
