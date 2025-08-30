@@ -14,5 +14,5 @@ public enum WorkerType {
     PERSONAL_TRAINER,
     MAKEUP_ARTIST,
     PHYSIOTHERAPIST,
-    OTHER
+    GENERAL, OTHER
 }

@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import uz.navbatuz.backend.common.Role;
+import uz.navbatuz.backend.common.Status;
 import uz.navbatuz.backend.location.dto.LocationRequest;
 import uz.navbatuz.backend.location.dto.LocationResponse;
 import uz.navbatuz.backend.location.dto.LocationSummary;
@@ -27,10 +28,15 @@ import org.springframework.data.domain.Page;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
+import uz.navbatuz.backend.worker.dto.WorkerDetailsDto;
 import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.mapper.WorkerMapper;
+import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.repository.WorkerRepository;
+import uz.navbatuz.backend.common.WorkerType;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.*;
 
 import static uz.navbatuz.backend.common.Role.OWNER;
@@ -44,6 +50,7 @@ public class ProviderService {
     private final BusinessHourRepository businessHourRepository;
     private final CurrentUserService currentUserService;
     private final WorkerRepository workerRepository;
+    private final WorkerMapper workerMapper;
 
     public Provider create(ProviderRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -442,6 +449,64 @@ public class ProviderService {
             //case WORKER -> getProviderIdForWorker(userId);
             default -> throw new IllegalStateException("Role not linked to provider: " + role);
         };
+    }
+
+    @Transactional
+    public WorkerDetailsDto enable(UUID providerId, EnableOwnerAsWorkerRequest req) {
+        UUID userId = currentUserService.getCurrentUserId();
+
+        Provider p = providerRepository.findById(providerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Provider not found"));
+
+        // only the real owner can enable themselves
+        if (p.getOwner() == null || !p.getOwner().getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Not your provider");
+        }
+
+        // if a worker already exists for this (user, provider), use that managed entity
+        Worker worker = workerRepository.findByUser_IdAndProvider_Id(userId, providerId).orElse(null);
+
+        if (worker == null) {
+            // if a Worker with this id exists on a DIFFERENT provider, block
+            Worker existingById = workerRepository.findById(userId).orElse(null);
+            if (existingById != null && !existingById.getProvider().getId().equals(providerId)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "You already work for another provider");
+            }
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+            worker = Worker.builder()
+                    .id(userId)                      // @MapsId → same as user id
+                    .user(user)
+                    .provider(p)
+                    .workerType(defaultType(req))
+                    .status(defaultStatus(req))
+                    .isActive(req.isActive() == null || req.isActive()) // default true
+                    .hireDate(LocalDate.now())
+                    .avgRating(0f)
+                    .reviewsCount(0L)
+                    .build();
+
+            worker = workerRepository.save(worker); // managed persist
+        } else {
+            // update fields on the managed instance (NO merge)
+            if (req.workerType() != null) worker.setWorkerType(req.workerType());
+            if (req.status() != null) worker.setStatus(req.status());
+            if (req.isActive() != null) worker.setActive(req.isActive());
+            // hireDate stays as is if already set
+            worker = workerRepository.save(worker);
+        }
+
+        return workerMapper.mapToDetails(worker);
+    }
+
+    private WorkerType defaultType(EnableOwnerAsWorkerRequest req) {
+        return req.workerType() != null ? req.workerType() : WorkerType.GENERAL;
+    }
+
+    private Status defaultStatus(EnableOwnerAsWorkerRequest req) {
+        return req.status() != null ? req.status() : Status.AVAILABLE;
     }
 
 }

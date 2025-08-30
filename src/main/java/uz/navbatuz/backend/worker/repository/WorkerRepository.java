@@ -34,4 +34,6 @@ public interface WorkerRepository extends JpaRepository<Worker, UUID> {
     boolean existsByUserIdAndProviderId(UUID userId, UUID providerId);
 
     Optional<Worker> findByUserId(UUID userId);
+
+    Optional<Worker> findByUser_IdAndProvider_Id(UUID userId, UUID providerId);
 }

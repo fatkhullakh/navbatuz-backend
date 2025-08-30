@@ -22,6 +22,9 @@ public class Worker {
     @Id
     private UUID id;
 
+    @Version
+    private Long version;
+
     @OneToOne
     @MapsId
     @JoinColumn(name = "id")
