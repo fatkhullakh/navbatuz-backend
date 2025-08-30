@@ -12,11 +12,13 @@ import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistCreateReq;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistDetailsDto;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistDto;
+import uz.navbatuz.backend.receptionist.dto.ReceptionistUpdateReq;
 import uz.navbatuz.backend.receptionist.model.Receptionist;
 import uz.navbatuz.backend.receptionist.repository.ReceptionistRepository;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
+import uz.navbatuz.backend.user.service.UserService;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -32,6 +34,7 @@ public class ReceptionistService {
     private final UserRepository users;
     private final ProviderRepository providers;
     private final CurrentUserService current;
+    private final UserRepository userRepo;
 
     @Transactional
     public Receptionist createReceptionist(UUID providerId, ReceptionistCreateReq req) {
@@ -64,7 +67,7 @@ public class ReceptionistService {
     }
 
     public List<ReceptionistDetailsDto> list(UUID providerId) {
-        return repo.findAllByProviderIdAndActiveTrue(providerId)
+        return repo.findAllByProviderId(providerId)
                 .stream().map(this::mapToDetailsDto).toList();
     }
 
@@ -74,6 +77,45 @@ public class ReceptionistService {
                         HttpStatus.NOT_FOUND, "Receptionist not found"));
 
         return mapToDetailsDto(receptionist);
+    }
+
+    @Transactional
+    public ReceptionistDetailsDto deactivate(UUID providerId, UUID receptionistId) {
+        Receptionist r = repo.findByIdAndProviderId(receptionistId, providerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receptionist not found"));
+        if (!r.isActive()) return mapToDetailsDto(r);
+        r.setActive(false);
+        r.setStatus(Receptionist.ReceptionistStatus.TERMINATED);
+        r.setTerminationDate(LocalDate.now());
+        repo.save(r);
+        return mapToDetailsDto(r);
+    }
+
+    @Transactional
+    public ReceptionistDetailsDto activate(UUID providerId, UUID receptionistId) {
+        Receptionist r = repo.findByIdAndProviderId(receptionistId, providerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receptionist not found"));
+        r.setActive(true);
+        r.setStatus(Receptionist.ReceptionistStatus.ACTIVE);
+        r.setTerminationDate(null);
+        if (r.getHireDate() == null) r.setHireDate(LocalDate.now());
+        repo.save(r);
+        return mapToDetailsDto(r);
+    }
+
+    @Transactional
+    public ReceptionistDetailsDto update(UUID providerId, UUID receptionistId, ReceptionistUpdateReq req) {
+        Receptionist r = repo.findByIdAndProviderId(receptionistId, providerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Receptionist not found"));
+
+        User u = r.getUser();
+        if (req.name() != null && !req.name().isBlank()) u.setName(req.name().trim());
+        if (req.surname() != null) u.setSurname(req.surname().trim());
+        if (req.phoneNumber() != null) u.setPhoneNumber(req.phoneNumber().trim());
+        if (req.email() != null) u.setEmail(req.email().trim());
+        userRepo.save(u);
+
+        return mapToDetailsDto(r);
     }
 
     private ReceptionistDetailsDto mapToDetailsDto(Receptionist r) {

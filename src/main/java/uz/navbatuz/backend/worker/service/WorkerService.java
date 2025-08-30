@@ -150,9 +150,9 @@ public class WorkerService {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
-        if (!worker.getProvider().getOwner().getId().equals(currentUserId)) {
-            throw new RuntimeException("You are not allowed to deactivate this worker.");
-        }
+//        if (!worker.getProvider().getOwner().getId().equals(currentUserId)) {
+//            throw new RuntimeException("You are not allowed to deactivate this worker.");
+//        }
 
         worker.setActive(false);
         workerRepository.save(worker);
@@ -165,9 +165,9 @@ public class WorkerService {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
-        if(!worker.getProvider().getOwner().getId().equals(currentUserId)) {
-            throw new RuntimeException("You are not allowed to activate this worker.");
-        }
+//        if(!worker.getProvider().getOwner().getId().equals(currentUserId)) {
+//            throw new RuntimeException("You are not allowed to activate this worker.");
+//        }
 
         worker.setActive(true);
         workerRepository.save(worker);

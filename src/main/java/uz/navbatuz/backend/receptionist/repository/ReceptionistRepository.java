@@ -13,11 +13,13 @@ public interface ReceptionistRepository extends JpaRepository<Receptionist, UUID
 
     boolean existsByUserIdAndProviderIdAndActiveTrue(UUID userId, UUID providerId);
 
-    List<Receptionist> findAllByProviderIdAndActiveTrue(UUID providerId);
+    List<Receptionist> findAllByProviderId(UUID providerId);
 
     Optional<Receptionist> findFirstByUserIdAndActiveTrue(UUID userId);
 
     Optional<Receptionist> findByProviderIdAndActiveTrue(UUID providerId);
 
     Optional<Receptionist> findByIdAndActiveTrue(UUID id);
+
+    Optional<Receptionist> findByIdAndProviderId(UUID id, UUID providerId);
 }

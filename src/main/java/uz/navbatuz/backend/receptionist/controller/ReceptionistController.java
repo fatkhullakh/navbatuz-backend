@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistCreateReq;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistDetailsDto;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistDto;
+import uz.navbatuz.backend.receptionist.dto.ReceptionistUpdateReq;
 import uz.navbatuz.backend.receptionist.model.Receptionist;
 import uz.navbatuz.backend.receptionist.service.ReceptionistService;
 
@@ -44,5 +45,27 @@ public class ReceptionistController {
     @GetMapping("/{receptionistId}")
     public ResponseEntity<ReceptionistDetailsDto> getById(@PathVariable UUID receptionistId) {
         return ResponseEntity.ok(service.getById(receptionistId));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PutMapping("/{receptionistId}/deactivate")
+    public ResponseEntity<ReceptionistDetailsDto> deactivate(@PathVariable UUID providerId,
+                                                             @PathVariable UUID receptionistId) {
+        return ResponseEntity.ok(service.deactivate(providerId, receptionistId));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PutMapping("/{receptionistId}/activate")
+    public ResponseEntity<ReceptionistDetailsDto> activate(@PathVariable UUID providerId,
+                                                           @PathVariable UUID receptionistId) {
+        return ResponseEntity.ok(service.activate(providerId, receptionistId));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PatchMapping("/{receptionistId}")
+    public ResponseEntity<ReceptionistDetailsDto> update(@PathVariable UUID providerId,
+                                                         @PathVariable UUID receptionistId,
+                                                         @RequestBody ReceptionistUpdateReq req) {
+        return ResponseEntity.ok(service.update(providerId, receptionistId, req));
     }
 }
