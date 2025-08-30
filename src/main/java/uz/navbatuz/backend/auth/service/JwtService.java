@@ -55,7 +55,7 @@ public class JwtService {
     }
 }
 
-    // Verifies if the token is correctly signed and not expired.
+// Verifies if the token is correctly signed and not expired.
 //     public boolean isTokenValid(String token) {
 //         try {
 //             Jwts.parserBuilder()

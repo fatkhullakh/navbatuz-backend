@@ -1,3 +1,4 @@
+// uz/navbatuz/backend/config/SecurityConfig.java
 package uz.navbatuz.backend.config;
 
 import lombok.RequiredArgsConstructor;
@@ -15,9 +16,6 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import uz.navbatuz.backend.security.JwtAuthenticationFilter;
 
-import static org.springframework.security.config.Customizer.withDefaults;
-
-
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -32,22 +30,17 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/providers/register", "/api/customers/**", "api/auth/login").permitAll()
-                        .requestMatchers("/api/users/me").authenticated()
-                        //.requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/**").authenticated()
-                        /*.requestMatchers("/api/workers/**").authenticated()*/
-                        .requestMatchers("/api/workers/public/**").permitAll()
-                        .requestMatchers("/api/providers/**").permitAll()
-                        .requestMatchers("/api/services/public/**").permitAll()
-                        .requestMatchers("/api/appointments/**").permitAll()
+                        // public auth
+                        .requestMatchers("/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/forgot-password").permitAll()
+                        // public GETs
                         .requestMatchers(HttpMethod.GET,
                                 "/api/providers/public/**",
                                 "/api/services/public/**",
-                                "/api/workers/free-slots/**"   // optional: if you want free-slots without login
-                        ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
-
+                                "/api/workers/free-slots/**",
+                                "/uploads/**").permitAll()
+                        // everything else → authenticated
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
@@ -62,25 +55,3 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 }
-
-//@Configuration
-//@EnableWebSecurity
-//public class SecurityConfig {
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/**").permitAll()
-//                        .requestMatchers("/api/providers/register").permitAll()
-//                        .anyRequest().authenticated()
-//                )
-//                .formLogin(AbstractHttpConfigurer::disable)
-//                .httpBasic(AbstractHttpConfigurer::disable)
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//
-//        return http.build();
-//    }
-//}
-
-

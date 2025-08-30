@@ -20,6 +20,8 @@ import uz.navbatuz.backend.provider.dto.*;
 import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.service.ProviderService;
 import uz.navbatuz.backend.security.CurrentUserService;
+import uz.navbatuz.backend.worker.dto.WorkerDetailsDto;
+import uz.navbatuz.backend.worker.service.WorkerService;
 
 import java.util.*;
 
@@ -201,6 +203,17 @@ public class ProviderController {
         var providerId = providerService.getProviderIdForUser(userId, role);
         return ResponseEntity.ok(providerService.getById(providerId));
     }
+
+    @PreAuthorize("hasAnyRole('OWNER','ADMIN')")
+    @PostMapping("/{providerId}/owner-as-worker")
+    public ResponseEntity<WorkerDetailsDto> enableOwnerAsWorker(
+            @PathVariable UUID providerId,
+            @RequestBody EnableOwnerAsWorkerRequest req
+    ) {
+        return ResponseEntity.ok(providerService.enable(providerId, req));
+    }
+
+
 
 //    @PutMapping("/{id}/logo")
 //    @PreAuthorize("hasAnyRole('OWNER','ADMIN')") // adjust roles as needed

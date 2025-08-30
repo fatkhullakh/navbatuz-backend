@@ -5,5 +5,6 @@ public enum Role {
     CUSTOMER,
     WORKER,
     OWNER,
-    RECEPTIONIST
+    RECEPTIONIST;
+
 }
