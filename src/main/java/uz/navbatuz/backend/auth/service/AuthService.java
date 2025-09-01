@@ -169,4 +169,12 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    public boolean emailExists(String email) {
+        return userRepository.existsByEmailIgnoreCase(email);
+    }
+
+    public boolean phoneNumberExists(String phoneNumber) {
+        return userRepository.existsByPhoneNumber(phoneNumber);
+    }
+
 }

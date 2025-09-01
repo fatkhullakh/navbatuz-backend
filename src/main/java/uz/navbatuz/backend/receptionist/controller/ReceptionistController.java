@@ -6,12 +6,16 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.provider.dto.ProviderResponse;
+import uz.navbatuz.backend.provider.service.ProviderService;
+import uz.navbatuz.backend.providerclient.service.ProviderClientService;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistCreateReq;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistDetailsDto;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistDto;
 import uz.navbatuz.backend.receptionist.dto.ReceptionistUpdateReq;
 import uz.navbatuz.backend.receptionist.model.Receptionist;
 import uz.navbatuz.backend.receptionist.service.ReceptionistService;
+import uz.navbatuz.backend.security.CurrentUserService;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +26,9 @@ import java.util.UUID;
 public class ReceptionistController {
 
     private final ReceptionistService service;
+    private final ProviderService providerService;
+    private final CurrentUserService currentUserService;
+    private final ProviderClientService clientService;
 
     // Keep the same broad guard style you used on Worker; the service enforces OWNER.
     @PreAuthorize("hasAnyRole('OWNER','RECEPTIONIST','WORKER','ADMIN')")
@@ -68,4 +75,19 @@ public class ReceptionistController {
                                                          @RequestBody ReceptionistUpdateReq req) {
         return ResponseEntity.ok(service.update(providerId, receptionistId, req));
     }
+
+//    @PreAuthorize("hasAnyRole('OWNER','WORKER','RECEPTIONIST','ADMIN')")
+//    @GetMapping("/providers/{providerId}/clients/search")
+//    public ResponseEntity<List<ProviderResponse>> search(
+//            @PathVariable UUID providerId,
+//            @RequestParam(defaultValue = "") String q) {
+//
+//        UUID userId = currentUserService.getCurrentUserId();
+//        staffGuard.ensureStaffOfProvider(userId, providerId);
+//
+//        // existing search logic...
+//        List<ProviderResponse> hits = clientService.search(providerId, q == null ? "" : q.trim());
+//        return ResponseEntity.ok(hits);
+//    }
+
 }

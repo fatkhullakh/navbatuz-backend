@@ -213,6 +213,18 @@ public class ProviderController {
         return ResponseEntity.ok(providerService.enable(providerId, req));
     }
 
+    @GetMapping("/public/email-exists")
+    public ResponseEntity<Map<String, Boolean>> emailExists(@RequestParam String email) {
+        boolean exists = providerService.emailExists(email);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
+    @GetMapping("/public/phone-exists")
+    public ResponseEntity<Map<String, Boolean>> phoneExists(@RequestParam String phone) {
+        boolean exists = providerService.phoneNumberExists(phone);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
 
 
 //    @PutMapping("/{id}/logo")

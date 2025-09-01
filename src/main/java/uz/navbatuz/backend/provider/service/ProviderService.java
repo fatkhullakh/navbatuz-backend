@@ -25,6 +25,7 @@ import uz.navbatuz.backend.provider.model.Provider;
 import uz.navbatuz.backend.provider.repository.ProviderRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
+import uz.navbatuz.backend.receptionist.repository.ReceptionistRepository;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
@@ -51,6 +52,7 @@ public class ProviderService {
     private final CurrentUserService currentUserService;
     private final WorkerRepository workerRepository;
     private final WorkerMapper workerMapper;
+    private final ReceptionistRepository receptionistRepository;
 
     public Provider create(ProviderRequest request) {
         User owner = userRepository.findById(request.getOwnerId())
@@ -430,6 +432,17 @@ public class ProviderService {
                 .getId();
     }
 
+    public UUID getProviderIdForReceptionist(UUID userId) {
+        return receptionistRepository.findByUserId(userId)
+                .map(r -> {
+                    // depending on your model:
+                    // return r.getProvider().getId();
+                    return r.getProvider().getId(); // if you store providerId directly
+                })
+                .orElseThrow(() -> new RuntimeException("Provider not found for receptionist"));
+    }
+
+
 //    public UUID getProviderIdForReceptionist(UUID userId) {
 //        return receptionistRepository.findByReceptionistId(userId)
 //                .orElseThrow(() -> new RuntimeException("Provider not found for receptionist"))
@@ -445,7 +458,7 @@ public class ProviderService {
     public UUID getProviderIdForUser(UUID userId, Role role) {
         return switch (role) {
             case OWNER -> getProviderIdForOwner(userId);
-            //case RECEPTIONIST -> getProviderIdForReceptionist(userId);
+            case RECEPTIONIST -> getProviderIdForReceptionist(userId);
             //case WORKER -> getProviderIdForWorker(userId);
             default -> throw new IllegalStateException("Role not linked to provider: " + role);
         };
@@ -509,4 +522,11 @@ public class ProviderService {
         return req.status() != null ? req.status() : Status.AVAILABLE;
     }
 
+    public boolean emailExists(String email) {
+        return providerRepository.existsByEmailIgnoreCase(email);
+    }
+
+    public boolean phoneNumberExists(String phoneNumber) {
+        return providerRepository.existsByPhoneNumber(phoneNumber);
+    }
 }

@@ -33,6 +33,7 @@ public class SecurityConfig {
                         // public auth
                         .requestMatchers("/api/auth/login",
                                 "/api/auth/register",
+                                "/api/auth/public/**",
                                 "/api/auth/forgot-password").permitAll()
                         // public GETs
                         .requestMatchers(HttpMethod.GET,
