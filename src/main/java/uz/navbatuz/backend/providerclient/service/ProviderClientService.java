@@ -2,6 +2,7 @@
 package uz.navbatuz.backend.providerclient.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import uz.navbatuz.backend.customer.model.Customer;
@@ -35,14 +36,13 @@ public class ProviderClientService {
 
     @Transactional
     public void upsertFromAppointment(Provider provider,
-                                      Customer customer, // nullable
-                                      Guest guest,       // nullable
+                                      Customer customer,
+                                      Guest guest,
                                       String fallbackName,
                                       String fallbackPhone,
                                       UUID actorUserId) {
-        if (isWalkIn(customer, guest, fallbackName, fallbackPhone)) {
-            return; // ← do NOT insert/update provider_clients for walk-ins
-        }
+
+        if (isWalkIn(customer, guest, fallbackName, fallbackPhone)) return;
 
         final var now = LocalDateTime.now();
 
@@ -89,34 +89,45 @@ public class ProviderClientService {
     }
 
     private boolean isWalkIn(Customer customer, Guest guest, String fallbackName, String fallbackPhone) {
-        // name hint
         final String name = (customer != null && customer.getUser() != null) ? customer.getUser().getName()
                 : (guest != null ? guest.getName() : fallbackName);
         if (name != null && name.trim().equalsIgnoreCase("walk-in")) return true;
 
-        // phone hint
         final String rawPhone = (customer != null && customer.getUser() != null) ? customer.getUser().getPhoneNumber()
                 : (guest != null ? guest.getPhoneNumber() : fallbackPhone);
         final String e164 = normalizePhone(rawPhone);
-        if (e164 == null || e164.isBlank()) return true;       // no phone → treat as walk-in
-        if (e164.startsWith("+888")) return true;               // old placeholder
-        if (e164.equals("+000000000000")) return true;          // new placeholder
+        if (e164 == null || e164.isBlank()) return true;
+        if (e164.startsWith("+888")) return true;
+        if (e164.equals("+000000000000")) return true;
         return false;
     }
 
-
     @Transactional(readOnly = true)
     public List<ProviderClientResponse> search(UUID providerId, String q) {
-        final String prefix = normalizePhone(q);
-        return repo.searchByPhonePrefix(providerId, prefix).stream()
-                .limit(20)
-                .map(pc -> new ProviderClientResponse(
-                        pc.getId(),
-                        pc.getName(),
-                        mask(pc.getPhoneE164()),
-                        pc.getPersonType().name(),
-                        pc.getPersonType() == ProviderClient.PersonType.CUSTOMER ? pc.getCustomerId() : pc.getGuestId()
-                ))
+        final String phonePrefix = normalizePhone(q);
+        final String nameToken = q == null ? "" : q.trim().toLowerCase();
+
+        // empty → recent
+        if (nameToken.isEmpty()) {
+            return repo.findByProviderIdOrderByLastVisitAtDesc(providerId, PageRequest.of(0, 20))
+                    .stream()
+                    .map(this::toDto)
+                    .toList();
+        }
+
+        return repo.searchByPhoneOrName(providerId, phonePrefix, nameToken, PageRequest.of(0, 20))
+                .stream()
+                .map(this::toDto)
                 .toList();
+    }
+
+    private ProviderClientResponse toDto(ProviderClient pc) {
+        return new ProviderClientResponse(
+                pc.getId(),
+                pc.getName(),
+                mask(pc.getPhoneE164()),
+                pc.getPersonType().name(),
+                pc.getPersonType() == ProviderClient.PersonType.CUSTOMER ? pc.getCustomerId() : pc.getGuestId()
+        );
     }
 }

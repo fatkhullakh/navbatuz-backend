@@ -74,9 +74,9 @@ public class WorkerService {
             throw new RuntimeException("You are not allowed to assign workers to this provider.");
         }
 
-        if (!WorkerCategoryValidator.isCompatible(provider.getCategory(), request.workerType())) {
-            throw new IllegalArgumentException("Worker type " + request.workerType() + " is not allowed in " + provider.getCategory() + " category");
-        }
+//        if (!WorkerCategoryValidator.isCompatible(provider.getCategory(), request.workerType())) {
+//            throw new IllegalArgumentException("Worker type " + request.workerType() + " is not allowed in " + provider.getCategory() + " category");
+//        }
 
         User user = userRepository.findById(request.user())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -88,7 +88,7 @@ public class WorkerService {
                 .workerType(request.workerType())
                 .status(Status.AVAILABLE)
                 .hireDate(LocalDate.now())
-                .avgRating(3.0f)
+                .avgRating(0.0f)
                 .isActive(true)
                 .build();
 
