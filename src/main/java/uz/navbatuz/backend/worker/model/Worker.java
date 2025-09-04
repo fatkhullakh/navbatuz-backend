@@ -22,6 +22,10 @@ public class Worker {
     @Id
     private UUID id;
 
+    @Version
+    @Column(nullable = false)
+    private Long version;
+
     @OneToOne
     @MapsId
     @JoinColumn(name = "id")
@@ -38,7 +42,8 @@ public class Worker {
     private Status status;
     private LocalDate hireDate;
     private LocalDate terminationDate;
-    private float avgRating;
+    private Float avgRating;
+    private Long reviewsCount;
     private boolean isActive;
 
     @ManyToMany(mappedBy = "workers")

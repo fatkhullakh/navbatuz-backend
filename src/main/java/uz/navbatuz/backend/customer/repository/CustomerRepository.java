@@ -17,4 +17,13 @@ public interface CustomerRepository extends JpaRepository<Customer, Integer> {
     boolean existsById(UUID id);
 
     Optional<Customer> findById(UUID id);
+
+    Optional<Customer> findByUserId(UUID userId);
+
+
+    Optional<Customer> findByUserEmail(String email);
+
+    @Query("select c from Customer c where c.user.phoneNumber = :phone")
+    Optional<Customer> findByUserPhone(@Param("phone") String phoneE164);
+
 }

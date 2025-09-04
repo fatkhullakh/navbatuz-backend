@@ -1,11 +1,14 @@
 package uz.navbatuz.backend.provider.dto;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 
-@Data
-@AllArgsConstructor
-public class ProviderResponse {
-    private String name;
-    private String description;
-    private float avgRating;
-}
+import uz.navbatuz.backend.common.Category;
+import uz.navbatuz.backend.location.dto.LocationSummary;
+
+public record ProviderResponse(
+        java.util.UUID id,
+        String name,
+        String description,
+        float avgRating,
+        Category category,
+        LocationSummary location,
+        String logoUrl// may be null
+) {}

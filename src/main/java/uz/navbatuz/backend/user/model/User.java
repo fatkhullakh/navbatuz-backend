@@ -46,6 +46,10 @@ public class User implements UserDetails {
     private boolean isActive;
     private Language language;
     private Role role;
+    private String country;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
 
     @Override public Collection<? extends GrantedAuthority> getAuthorities() { return List.of(); }
     @Override public String getUsername() { return email; }
@@ -54,4 +58,5 @@ public class User implements UserDetails {
     @Override public boolean isAccountNonLocked()      { return true; }
     @Override public boolean isCredentialsNonExpired() { return true; }
     @Override public boolean isEnabled()               { return true; }
+
 }

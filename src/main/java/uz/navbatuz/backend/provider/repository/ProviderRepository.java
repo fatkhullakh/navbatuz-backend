@@ -20,7 +20,7 @@ public interface ProviderRepository extends JpaRepository<Provider, UUID> {
 
     boolean existsByEmail(@NotBlank(message = "Email is required") @Email(message = "Invalid email format") String email);
 
-    boolean existsByPhoneNumber(@NotBlank(message = "Phone number is required") @Pattern(regexp = "^\\+?998\\d{9}$", message = "Phone must be valid Uzbekistan number") String phoneNumber);
+    //boolean existsByPhoneNumber(@NotBlank(message = "Phone number is required") @Pattern(regexp = "^\\+?998\\d{9}$", message = "Phone must be valid Uzbekistan number") String phoneNumber);
 
     Optional<Provider> findByEmail(String email);
 
@@ -31,5 +31,16 @@ public interface ProviderRepository extends JpaRepository<Provider, UUID> {
     Page<Provider> findByCategoryAndIsActiveTrue(Category category, Pageable pageable);
 
     Page<Provider> findByIsActiveTrue(Pageable pageable);
+
+    Optional<Provider> findByOwnerId(UUID ownerId);
+
+
+    boolean existsByIdAndOwner_Id(UUID providerId, UUID ownerId);
+
+    boolean existsByEmailIgnoreCase(String email);
+
+    boolean existsByPhoneNumber(String phoneNumber);
+
+//    boolean existsByEmailIgnoreCase(String email);
 
 }

@@ -9,12 +9,13 @@ import java.util.List;
 import java.util.UUID;
 
 public record CreateServiceRequest(
-        @NotNull String name,
-        @NotNull String description,
-        @NotNull Category category,
-        @Positive Double price,
-        @Positive Duration duration,
-        @NotNull UUID providerId,
-        @NotNull List<UUID> workerIds
+        String name,
+        String description,
+        Category category,
+        Double price,
+        Duration duration,
+        UUID providerId,
+        List<UUID> workerIds,
+        String imageUrl
 ) {}
 

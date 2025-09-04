@@ -8,9 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.customer.model.Customer;
 import uz.navbatuz.backend.customer.service.CustomerService;
+import uz.navbatuz.backend.provider.dto.ProviderResponse;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -40,8 +42,15 @@ public class CustomerController {
     }
 
     @GetMapping("/favourites")
-    public ResponseEntity<List<UUID>> getFavouriteProviders(Authentication authentication) {
+    public ResponseEntity<List<ProviderResponse>> getFavouriteProviders(Authentication authentication) {
         return ResponseEntity.ok(customerService.getFavouriteProviders(authentication.getName()));
+    }
+
+    @PreAuthorize("hasRole('CUSTOMER')")
+    @GetMapping("/me")
+    public ResponseEntity<Map<String, UUID>> me(Authentication authentication) {
+        UUID id = customerService.requireCustomerIdByUsername(authentication.getName());
+        return ResponseEntity.ok(Map.of("id", id));
     }
 
 }

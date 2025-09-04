@@ -1,8 +1,10 @@
+// uz/navbatuz/backend/config/SecurityConfig.java
 package uz.navbatuz.backend.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -13,7 +15,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import uz.navbatuz.backend.security.JwtAuthenticationFilter;
-
 
 @Configuration
 @EnableWebSecurity
@@ -29,17 +30,20 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/providers/register", "/api/customers/**").permitAll()
-                        .requestMatchers("/api/users/me").authenticated()
-                        //.requestMatchers("/api/users/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/**").authenticated()
-                        /*.requestMatchers("/api/workers/**").authenticated()*/
-                        .requestMatchers("/api/workers/public/**").permitAll()
-                        .requestMatchers("/api/providers/public/**").permitAll()
-                        .requestMatchers("/api/providers/**").authenticated()
-                        .requestMatchers("/api/services/public/**").permitAll()
-                        .requestMatchers("/api/appointments/**").permitAll()
-
+                        // public auth
+                        .requestMatchers("/api/auth/login",
+                                "/api/auth/register",
+                                "/api/auth/public/**",
+                                "/api/health",
+                                "/health",  // Add this line
+                                "/api/auth/forgot-password").permitAll()
+                        // public GETs
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/providers/public/**",
+                                "/api/services/public/**",
+                                "/api/workers/free-slots/**",
+                                "/uploads/**").permitAll()
+                        // everything else → authenticated
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
@@ -54,25 +58,3 @@ public class SecurityConfig {
         return config.getAuthenticationManager();
     }
 }
-
-//@Configuration
-//@EnableWebSecurity
-//public class SecurityConfig {
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/api/**").permitAll()
-//                        .requestMatchers("/api/providers/register").permitAll()
-//                        .anyRequest().authenticated()
-//                )
-//                .formLogin(AbstractHttpConfigurer::disable)
-//                .httpBasic(AbstractHttpConfigurer::disable)
-//                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-//
-//        return http.build();
-//    }
-//}
-
-

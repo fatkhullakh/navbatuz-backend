@@ -18,4 +18,6 @@ public interface ActualAvailabilityRepository extends JpaRepository<ActualAvaila
     List<ActualAvailabilityResponse> findByWorkerIdAndDateBetween(UUID workerId, LocalDate from, LocalDate to);
 
     Optional<ActualAvailability> findByWorkerIdAndDate(UUID workerId, LocalDate date);
+
+    int deleteByIdAndWorkerId(Long availabilityId, UUID workerId);
 }

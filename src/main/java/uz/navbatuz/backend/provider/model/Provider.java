@@ -22,6 +22,10 @@ public class Provider {
     @Id
     @GeneratedValue
     private UUID id;
+
+    @Version
+    private Long version;
+
     private String name;
     private String description;
 
@@ -50,16 +54,26 @@ public class Provider {
     public void preUpdate() {
         data_updated = LocalDateTime.now();
     }
-    private float avgRating;
+    private Float avgRating;
+    private Long reviewsCount;
     boolean isActive;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", updatable = false)
     private User owner;
 
-    @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "location_id")
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "location_id", nullable = true)
     private Location location;
+
+    @Column(name = "logo_url")
+    private String logoUrl;
+
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+
+    @Column(name = "min_advance_booking_minutes")
+    private Integer minAdvanceBookingMinutes;
 
     // TODO: Relationship Provider with Receptionist and hasReceptinist method
 //    public boolean hasReceptionist(User currentUser) {

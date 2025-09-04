@@ -8,6 +8,7 @@ import uz.navbatuz.backend.customer.model.Customer;
 import uz.navbatuz.backend.service.model.ServiceEntity;
 import uz.navbatuz.backend.worker.model.Worker;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -29,6 +30,9 @@ public class Appointment {
     @GeneratedValue
     private UUID id;
 
+    @Version
+    private Long version;
+
     @ManyToOne
     @JoinColumn(name = "worker_id")
     private Worker worker;
@@ -37,7 +41,7 @@ public class Appointment {
     @JoinColumn(name = "service_id")
     private ServiceEntity service;
 
-    @ManyToOne
+    @ManyToOne(optional = true)
     @JoinColumn(name = "customer_id")
     private Customer customer;
 
@@ -49,5 +53,11 @@ public class Appointment {
     private AppointmentStatus status;
     private LocalDateTime bookedDate;
 
+    @ManyToOne
+    @JoinColumn(name = "guest_id")
+    private uz.navbatuz.backend.guest.model.Guest guest; // nullable
+
+    @Column(name = "created_by_user")
+    private java.util.UUID createdByUser;
 
 }

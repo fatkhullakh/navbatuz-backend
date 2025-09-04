@@ -39,5 +39,6 @@ public class RegisterRequest {
     private String password;
 
     private Language language;
+    private String country;
     private Role role;
 }

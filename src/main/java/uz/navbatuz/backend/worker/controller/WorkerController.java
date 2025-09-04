@@ -1,5 +1,6 @@
 package uz.navbatuz.backend.worker.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -9,9 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import uz.navbatuz.backend.availability.dto.*;
 import uz.navbatuz.backend.availability.model.Break;
 import uz.navbatuz.backend.availability.model.PlannedAvailability;
-import uz.navbatuz.backend.worker.dto.CreateWorkerRequest;
-import uz.navbatuz.backend.worker.dto.WorkerResponse;
-import uz.navbatuz.backend.worker.dto.WorkerResponseForService;
+import uz.navbatuz.backend.worker.dto.*;
 import uz.navbatuz.backend.worker.mapper.WorkerMapper;
 import uz.navbatuz.backend.worker.model.Worker;
 import uz.navbatuz.backend.worker.service.WorkerService;
@@ -49,6 +48,12 @@ public class WorkerController {
 //            "provider": "8af65e6f-1d6a-4027-ba94-490fddf922b1",
 //            "workerType": "BARBER"
 //    }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @GetMapping("/{workerId}")
+    public ResponseEntity<WorkerDetailsDto> getWorker(@PathVariable UUID workerId) {
+        return workerService.getWorker(workerId);
+    }
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
     @GetMapping("/provider/{providerId}")
@@ -91,9 +96,19 @@ public class WorkerController {
 
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
     @PostMapping("/availability/actual/{workerId}")
-    public ResponseEntity<Void> setActualAvailability(@PathVariable UUID workerId, @RequestBody List<ActualAvailabilityRequest> request) {
+    public ResponseEntity<Void> setActualAvailability(@PathVariable UUID workerId, @RequestBody ActualAvailabilityRequest request) {
         workerService.setActualAvailability(workerId, request);
         return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @DeleteMapping("/availability/actual/{workerId}/{availabilityId}")
+    public ResponseEntity<Void> deleteActualAvailability(
+            @PathVariable UUID workerId,
+            @PathVariable Long availabilityId
+    ) {
+        workerService.deleteActualAvailability(workerId, availabilityId);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/public/availability/actual/{workerId}")
@@ -103,12 +118,30 @@ public class WorkerController {
         return ResponseEntity.ok(workerService.getActualAvailability(workerId, from, to));
     }
 
+//    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+//    @PostMapping("/availability/break/{workerId}")
+//    public ResponseEntity<Void> setBreaks(@PathVariable UUID workerId, @RequestBody List<BreakRequest> request) {
+//        workerService.setBreak(workerId, request);
+//        return ResponseEntity.ok().build();
+//    }
+
     @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
     @PostMapping("/availability/break/{workerId}")
-    public ResponseEntity<Void> setBreaks(@PathVariable UUID workerId, @RequestBody List<BreakRequest> request) {
-        workerService.setBreak(workerId, request);
+    public ResponseEntity<Void> setBreakDaily(@PathVariable UUID workerId, @RequestBody BreakRequest request) {
+        workerService.setBreakDaily(workerId, request);
         return ResponseEntity.ok().build();
     }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @DeleteMapping("/availability/break/{workerId}/{breakId}")
+    public ResponseEntity<Void> deleteBreak(
+            @PathVariable UUID workerId,
+            @PathVariable Long breakId
+    ) {
+        workerService.deleteBreak(workerId, breakId);
+        return ResponseEntity.noContent().build();
+    }
+
 
     @GetMapping("/public/availability/break/{workerId}")
     public ResponseEntity<List<BreakResponse>> getBreaks(@PathVariable UUID workerId,
@@ -117,6 +150,8 @@ public class WorkerController {
         return ResponseEntity.ok(workerService.getBreaks(workerId, from, to));
     }
 
+
+
     @GetMapping("/free-slots/{workerId}")
     public ResponseEntity<List<LocalTime>> getFreeSlots(
             @PathVariable UUID workerId,
@@ -124,5 +159,28 @@ public class WorkerController {
             @RequestParam int serviceDurationMinutes) {
         Duration duration = Duration.ofMinutes(serviceDurationMinutes);
         return ResponseEntity.ok(workerService.getFreeSlots(workerId, date, duration));
+    }
+
+
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'WORKER', 'ADMIN')")
+    @PutMapping("/{workerId}")
+    public ResponseEntity<WorkerDetailsDto> updateWorker(
+            @PathVariable UUID workerId,
+            @RequestBody @Valid UpdateWorkerRequest req
+    ) {
+        return ResponseEntity.ok(workerService.updateWorker(workerId, req));
+    }
+
+    @PreAuthorize("hasAnyRole('WORKER','OWNER','RECEPTIONIST','ADMIN')")
+    @GetMapping("/me")
+    public ResponseEntity<WorkerDetailsDto> me() {
+        return workerService.getCurrentWorker();
+    }
+
+
+    @GetMapping("/public/{workerId}/details")
+    public ResponseEntity<WorkerPublicDetailsDto> getWorkerPublic(@PathVariable UUID workerId) {
+        Worker w = workerService.getByIdOrThrow(workerId);
+        return ResponseEntity.ok(workerMapper.mapToPublicDetails(w));
     }
 }

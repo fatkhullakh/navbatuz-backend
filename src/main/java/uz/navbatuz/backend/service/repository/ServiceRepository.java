@@ -3,6 +3,7 @@ package uz.navbatuz.backend.service.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -24,7 +25,7 @@ public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
     @Query("SELECT s FROM ServiceEntity s JOIN s.workers w WHERE w.id = :workerId AND s.isActive = true")
     List<ServiceEntity> findByWorkerIdAndIsActiveTrue(@Param("workerId") UUID workerId);
 
-    List<ServiceEntity> findByProviderId(UUID providerId);
+    List<ServiceEntity> findByProvider_IdAndDeletedFalse(UUID providerId);
 
     @Query("SELECT s FROM ServiceEntity s JOIN s.workers w WHERE w.id = :workerId")
     List<ServiceEntity> findByWorkerId(@Param("workerId") UUID workerId);
@@ -33,6 +34,12 @@ public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
 
     Page<ServiceEntity> findByIsActiveTrue(Pageable pageable);
 
+    List<ServiceEntity> findByProvider_IdAndDeletedFalseAndIsActiveTrue(UUID providerId);
+
+    // in ServiceRepository.java
+    List<ServiceEntity> findByWorkers_IdAndDeletedFalse(UUID workerId);
+
+    List<ServiceEntity> findByWorkers_IdAndDeletedFalseAndIsActiveTrue(UUID workerId);
 
     @Query("""
     SELECT s FROM ServiceEntity s
@@ -48,4 +55,7 @@ public interface ServiceRepository extends JpaRepository<ServiceEntity, UUID> {
             Pageable pageable
     );
 
+    @Modifying
+    @Query(value = "DELETE FROM worker_services WHERE service_id = :serviceId", nativeQuery = true)
+    void deleteWorkerLinks(@Param("serviceId") UUID serviceId);
 }

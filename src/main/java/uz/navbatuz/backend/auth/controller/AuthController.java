@@ -3,10 +3,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import uz.navbatuz.backend.auth.dto.AuthResponse;
-import uz.navbatuz.backend.auth.dto.LoginRequest;
-import uz.navbatuz.backend.auth.dto.RegisterRequest;
+import uz.navbatuz.backend.auth.dto.*;
 import uz.navbatuz.backend.auth.service.AuthService;
+
+import java.util.Map;
 
 
 @RestController
@@ -60,5 +60,30 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest loginRequest) {
         return ResponseEntity.ok(authService.login(loginRequest));
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest req) {
+        authService.forgotPassword(req);
+        return ResponseEntity.noContent().build(); // 204 regardless
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest req) {
+        authService.resetPassword(req);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/public/email-exists")
+    public ResponseEntity<Map<String, Boolean>> emailExists(@RequestParam String email) {
+        boolean exists = authService.emailExists(email);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
+    @GetMapping("/public/phone-exists")
+    public ResponseEntity<Map<String, Boolean>> phoneExists(@RequestParam String phone) {
+        boolean exists = authService.phoneNumberExists(phone);
+        return ResponseEntity.ok(Map.of("exists", exists));
+    }
+
 
 }

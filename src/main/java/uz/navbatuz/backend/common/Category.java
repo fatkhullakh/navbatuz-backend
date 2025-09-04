@@ -8,6 +8,7 @@ public enum Category {
     GYM,
     NAIL_SALON,
     BEAUTY_CLINIC,
+    BEAUTY_SALON,
     TATTOO_STUDIO,
     MASSAGE_CENTER,
     PHYSIOTHERAPY_CLINIC,
