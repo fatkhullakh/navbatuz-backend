@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface PasswordResetTokenRepository extends JpaRepository<PasswordResetToken, UUID> {
     List<PasswordResetToken> findByUserAndUsedFalseOrderByExpiresAtDesc(User user);
     void deleteByUserAndExpiresAtBefore(User user, LocalDateTime time);
+
+    void deleteByExpiresAtBefore(LocalDateTime now);
 }

@@ -17,6 +17,8 @@ import uz.navbatuz.backend.customer.repository.CustomerRepository;
 import uz.navbatuz.backend.user.model.User;
 import uz.navbatuz.backend.user.repository.UserRepository;
 import uz.navbatuz.backend.auth.service.JwtService;
+import uz.navbatuz.backend.common.EmailService;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.security.SecureRandom;
 import java.time.LocalDate;
@@ -38,6 +40,8 @@ public class AuthService {
     private final CustomerRepository customerRepository;
     private final PasswordResetTokenRepository resetRepo;
     private static final SecureRandom RNG = new SecureRandom();
+    private final EmailService emailService;
+    @Value("${app.publicUrl}") private String publicUrl;
 
     /*
     Converts incoming request into a User object.
@@ -121,13 +125,10 @@ public class AuthService {
 
     @Transactional
     public void forgotPassword(ForgotPasswordRequest req) {
-        var userOpt = userRepository.findByEmail(req.getEmail());
-        // For security: always 204, even if user not found.
-        if (userOpt.isEmpty()) return;
+        var userOpt = userRepository.findByEmail(req.email().trim().toLowerCase());
+        if (userOpt.isEmpty()) return; // 204 always
 
         var user = userOpt.get();
-
-        // housekeeping: delete old expired tokens
         resetRepo.deleteByUserAndExpiresAtBefore(user, LocalDateTime.now());
 
         String code = genCode6();
@@ -139,15 +140,28 @@ public class AuthService {
                 .build();
         resetRepo.save(token);
 
-        // TODO send email or SMS. For now log it.
-        System.out.println("[ForgotPassword] email=" + user.getEmail() + " code=" + code);
+        // email body (both code and link)
+        String link = publicUrl + "/reset?email=" + url(user.getEmail()) + "&code=" + code;
+        String html = """
+            <div style="font-family:Arial,sans-serif;font-size:14px">
+              <p>Use this code to reset your Birzum password:</p>
+              <p style="font-size:20px;font-weight:bold;letter-spacing:2px">%s</p>
+              <p>Or click this link (valid 15 minutes): <a href="%s">%s</a></p>
+              <p>If you didn’t request this, ignore this email.</p>
+            </div>
+          """.formatted(code, link, link);
 
-        // If you have JavaMailSender, send the code here.
+        emailService.sendHtml(user.getEmail(), "Reset your Birzum password", html);
+    }
+
+    // tiny helper
+    private static String url(String s) {
+        return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     @Transactional
     public void resetPassword(ResetPasswordRequest req) {
-        var user = userRepository.findByEmail(req.getEmail())
+        var user = userRepository.findByEmail(req.email())
                 .orElseThrow(() -> new RuntimeException("Invalid email or code"));
 
         // Find latest active tokens
@@ -156,7 +170,7 @@ public class AuthService {
 
         var match = tokens.stream()
                 .filter(t -> t.getExpiresAt().isAfter(now))
-                .filter(t -> passwordEncoder.matches(req.getCode(), t.getCodeHash()))
+                .filter(t -> passwordEncoder.matches(req.code(), t.getCodeHash()))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Invalid email or code"));
 
@@ -165,7 +179,7 @@ public class AuthService {
         resetRepo.saveAll(tokens);
 
         // set new password
-        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
         userRepository.save(user);
     }
 
