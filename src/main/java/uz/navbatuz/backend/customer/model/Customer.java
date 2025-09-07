@@ -2,6 +2,7 @@ package uz.navbatuz.backend.customer.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Point;
 import uz.navbatuz.backend.user.model.User;
 
 import java.util.List;
@@ -28,6 +29,20 @@ public class Customer {
     @CollectionTable(name = "customer_favourite_providers", joinColumns = @JoinColumn(name = "customer_id"))
     @Column(name = "provider_id")
     private List<UUID> favouriteShops;
+
+    /** Single saved “home area” point (lon/lat in JTS, GEOGRAPHY in DB). */
+    @Column(columnDefinition = "GEOGRAPHY(POINT,4326)")
+    private Point defaultCenter;
+
+    /** Optional structured place labels (for UX/filtering, not required for geo). */
+    @Column(length = 2)
+    private String countryIso2; // UZ, PL, etc.
+
+    @Column(length = 120)
+    private String city;
+
+    @Column(length = 120)
+    private String district;
 
 }
 

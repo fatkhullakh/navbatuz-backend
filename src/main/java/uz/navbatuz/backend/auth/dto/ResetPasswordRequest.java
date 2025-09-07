@@ -1,7 +1,9 @@
 package uz.navbatuz.backend.auth.dto;
 
+import jakarta.validation.constraints.*;
+
 public record ResetPasswordRequest(
-        @jakarta.validation.constraints.Email @jakarta.validation.constraints.NotBlank String email,
-        @jakarta.validation.constraints.Pattern(regexp="^[0-9]{6}$") String code,
-        @jakarta.validation.constraints.Size(min=8, max=128) String newPassword
+        @Email @NotBlank String email,
+        @Pattern(regexp = "^[0-9]{6}$", message = "Invalid code") String code,
+        @Size(min = 6, max = 128) String newPassword
 ) {}

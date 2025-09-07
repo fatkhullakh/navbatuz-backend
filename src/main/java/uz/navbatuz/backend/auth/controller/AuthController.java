@@ -65,13 +65,16 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<Void> forgotPassword(@RequestBody @Valid ForgotPasswordRequest req) {
-        String email = req.email().trim().toLowerCase(); // if using records
+        String email = req.email().trim().toLowerCase();
         if (!forgotLimiter.allow(email)) {
-            return ResponseEntity.noContent().build(); // 204, silently ignore extra requests
+            org.slf4j.LoggerFactory.getLogger(getClass()).info("Forgot limiter BLOCKED {}", email);
+            return ResponseEntity.noContent().build();
         }
+        org.slf4j.LoggerFactory.getLogger(getClass()).info("Forgot accepted {}", email);
         authService.forgotPassword(req);
         return ResponseEntity.noContent().build();
     }
+
 
     @PostMapping("/reset-password")
     public ResponseEntity<Void> resetPassword(@RequestBody @Valid ResetPasswordRequest req) {

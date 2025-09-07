@@ -1,6 +1,7 @@
 package uz.navbatuz.backend.user.service;
 
 
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import uz.navbatuz.backend.location.dto.LocationRequest;
+import uz.navbatuz.backend.location.model.Location;
+import uz.navbatuz.backend.provider.model.Provider;
+import uz.navbatuz.backend.provider.service.ProviderService;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
 import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
@@ -22,12 +27,16 @@ import uz.navbatuz.backend.user.repository.UserRepository;
 import java.util.List;
 import java.util.UUID;
 
+import static uz.navbatuz.backend.provider.service.ProviderService.makePoint;
+import static uz.navbatuz.backend.provider.service.ProviderService.normIso2;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ProviderService providerService;
 
     @Override
     public UserDetails loadUserByUsername(String email) {
@@ -241,5 +250,4 @@ public class UserService implements UserDetailsService {
         // If you later want to also delete the file from disk/S3,
         // you can add best-effort deletion here.
     }
-
 }

@@ -1,5 +1,8 @@
 package uz.navbatuz.backend.auth.dto;
 
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+
 public record ForgotPasswordRequest(
-        @jakarta.validation.constraints.Email @jakarta.validation.constraints.NotBlank String email
+        @Email @NotBlank String email
 ) {}
