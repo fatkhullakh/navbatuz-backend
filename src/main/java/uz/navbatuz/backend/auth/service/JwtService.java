@@ -18,15 +18,15 @@ import java.util.Date;
 
 @Service
 public class JwtService {
-    private static final String SECRET = "12345678901234567890123456789012";
-    private static final long EXPIRATION = 1000L * 60 * 60 * 24;
+    private static final String SECRET = "12345678901234567890123456789012"; // >=32 chars
+    private static final long EXPIRATION = 1000L * 60 * 60 * 24 * 30; // 30 days
 
     private Key getKey() { return Keys.hmacShaKeyFor(SECRET.getBytes()); }
 
     public String generateToken(User user) {
         return Jwts.builder()
-                .setSubject(user.getId().toString())               // sub = UUID
-                .claim("email", user.getEmail())                   // email as claim
+                .setSubject(user.getId().toString())
+                .claim("email", user.getEmail())
                 .claim("role", user.getRole().name())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
@@ -54,6 +54,7 @@ public class JwtService {
                 .parseClaimsJws(token).getBody().getExpiration().before(new Date());
     }
 }
+
 
 // Verifies if the token is correctly signed and not expired.
 //     public boolean isTokenValid(String token) {

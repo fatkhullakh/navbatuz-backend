@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -29,28 +30,28 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(Customizer.withDefaults())                 // << ENABLE CORS
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
-                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/public/**",
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login", "/api/auth/register",
+                                "/api/auth/forgot-password", "/api/auth/reset-password",
+                                "/api/auth/public/**",
+                                "/public/**", "/p/**", "/s/**",          // <— ADD
                                 "/api/health", "/health",
-                                "/api/providers/public/**", "/api/services/public/**",
-                                "/api/workers/free-slots/**", "/uploads/**").permitAll()
-                        .requestMatchers("/api/auth/**", "/error", "/api/health", "/health").permitAll()
+                                "/api/providers/public/**",
+                                "/api/services/public/**",
+                                "/api/workers/free-slots/**",
+                                "/uploads/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
+
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> {
-                            // unauthenticated access to a protected resource -> 401
-                            System.err.println("AuthEntryPoint: " + e.getMessage() + " URI=" + req.getRequestURI());
-                            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                        })
-                        .accessDeniedHandler((req, res, e) -> {
-                            // authenticated but not authorized -> 403
-                            System.err.println("AccessDenied: " + e.getMessage() + " URI=" + req.getRequestURI());
-                            res.sendError(HttpServletResponse.SC_FORBIDDEN);
-                        })
+                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN))
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 

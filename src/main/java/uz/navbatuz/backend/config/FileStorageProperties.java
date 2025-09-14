@@ -1,22 +1,15 @@
+// uz/navbatuz/backend/config/FileStorageProperties.java
 package uz.navbatuz.backend.config;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-@Getter
-@Setter
-@ConfigurationProperties(prefix = "app.uploads")
+@Data
+@ConfigurationProperties(prefix = "storage")
 public class FileStorageProperties {
-    /**
-     * Directory on disk where files are stored.
-     * e.g. "uploads" or "/var/app/uploads"
-     */
-    private String dir = "uploads";
-
-    /**
-     * Base URL used to build public URLs.
-     * e.g. "http://localhost:8080"
-     */
-    private String baseUrl = "http://localhost:8080";
+    private String dir;
+    private String provider;      // "s3" or "disk"
+    private String s3Bucket;
+    private String s3Region;
+    private String publicBaseUrl; // CDN or S3 URL
 }
