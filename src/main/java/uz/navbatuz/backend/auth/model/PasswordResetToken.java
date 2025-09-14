@@ -7,20 +7,29 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Table(name = "password_reset_tokens",
+        indexes = {
+                @Index(name="idx_prt_user_used", columnList="user_id,used"),
+                @Index(name="idx_prt_expires",   columnList="expires_at")
+        })
+@Data @Builder @NoArgsConstructor @AllArgsConstructor
 public class PasswordResetToken {
-    @Id @GeneratedValue
+    @Id
     private UUID id;
 
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
     private User user;
 
-    @Column(nullable = false, length = 120)
-    private String codeHash;           // BCrypt of 6-digit code
+    @Column(name = "code_hash", nullable = false, length = 100)
+    private String codeHash;
 
-    @Column(nullable = false)
-    private LocalDateTime expiresAt;   // e.g., +15 minutes
+    @Column(name = "expires_at", nullable = false)
+    private LocalDateTime expiresAt;
 
-    @Column(nullable = false)
-    private boolean used = false;
+    @Column(name = "used", nullable = false)
+    private boolean used;
+
+    @Column(name = "created_at", nullable = false)
+    private LocalDateTime createdAt;
 }

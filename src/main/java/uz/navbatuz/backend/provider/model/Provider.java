@@ -1,5 +1,6 @@
 package uz.navbatuz.backend.provider.model;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import uz.navbatuz.backend.common.Category;
@@ -27,7 +28,9 @@ public class Provider {
     private Long version;
 
     private String name;
-    private String description;
+
+    @Column(length = 2000)
+    private @Size(max = 2000)String description;
 
     @Column(nullable = false)
     @Enumerated(EnumType.STRING)

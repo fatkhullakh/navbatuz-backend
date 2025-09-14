@@ -1,11 +1,13 @@
 // uz/navbatuz/backend/config/SecurityConfig.java
 package uz.navbatuz.backend.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -28,30 +30,34 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(Customizer.withDefaults())                 // << ENABLE CORS
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // public auth
-                        .requestMatchers("/api/auth/login",
-                                "/api/auth/register",
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/login", "/api/auth/register",
+                                "/api/auth/forgot-password", "/api/auth/reset-password",
                                 "/api/auth/public/**",
-                                "/api/health",
-                                "/health",  // Add this line
-                                "/api/auth/forgot-password").permitAll()
-                        // public GETs
-                        .requestMatchers(HttpMethod.GET,
+                                "/public/**", "/p/**", "/s/**",          // <— ADD
+                                "/api/health", "/health",
                                 "/api/providers/public/**",
                                 "/api/services/public/**",
                                 "/api/workers/free-slots/**",
-                                "/uploads/**").permitAll()
-                        // everything else → authenticated
+                                "/uploads/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
-                .userDetailsService(userDetailsService)
+
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+                        .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN))
+                )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
+
 
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {

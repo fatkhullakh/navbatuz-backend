@@ -7,6 +7,7 @@ import uz.navbatuz.backend.appointment.dto.AppointmentResponse;
 import uz.navbatuz.backend.appointment.model.Appointment;
 import uz.navbatuz.backend.common.AppointmentStatus;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
@@ -26,11 +27,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     List<Appointment> findByWorkerIdAndDateAndStatusInOrderByStartTime(UUID workerId, LocalDate date, Set<AppointmentStatus> statuses);
 
-    //    @Query("""
-//       select a
-//       from Appointment a
-//       where a.customer.id = :userId or a.worker.id = :userId
-//       order by a.date asc, a.startTime asc
-//    """)
-//    List<Appointment> findAllByCustomerOrWorker(@Param("userId") UUID userId);
+    @Query(
+            value = """
+      SELECT * FROM appointment
+      WHERE status = ANY(:statuses)
+        AND end_at <= :now
+      FOR UPDATE SKIP LOCKED
+      LIMIT :limit
+    """,
+            nativeQuery = true
+    )
+    List<Appointment> pickOverdueForUpdate(
+            @Param("statuses") String[] statuses,
+            @Param("now") Instant now,
+            @Param("limit") int limit
+    );
 }

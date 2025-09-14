@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.location.dto.LocationRequest;
 import uz.navbatuz.backend.security.CurrentUserService;
 import uz.navbatuz.backend.user.dto.ChangePasswordRequest;
 import uz.navbatuz.backend.user.dto.SettingsUpdateRequest;

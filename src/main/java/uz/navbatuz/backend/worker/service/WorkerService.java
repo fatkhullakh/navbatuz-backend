@@ -60,7 +60,7 @@ public class WorkerService {
             AppointmentStatus.COMPLETED   // include if completed should block TODAY's remaining time (usually not needed)
     );
 
-    private static final Duration STEP = Duration.ofMinutes(5);
+    private static final Duration STEP = Duration.ofMinutes(10);
 
 
     @Transactional

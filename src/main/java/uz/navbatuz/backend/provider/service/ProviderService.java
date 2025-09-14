@@ -307,7 +307,7 @@ public class ProviderService {
 
     private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
-    private static Point makePoint(Double lat, Double lng) {
+    public static Point makePoint(Double lat, Double lng) {
         if (lat == null || lng == null) throw new IllegalArgumentException("lat/lng required");
         if (lat < -90 || lat > 90) throw new IllegalArgumentException("latitude out of range");
         if (lng < -180 || lng > 180) throw new IllegalArgumentException("longitude out of range");
@@ -316,7 +316,7 @@ public class ProviderService {
         return p;
     }
 
-    private static String normIso2(String iso2) {
+    public static String normIso2(String iso2) {
         return iso2 == null ? null : iso2.trim().toUpperCase();
     }
 

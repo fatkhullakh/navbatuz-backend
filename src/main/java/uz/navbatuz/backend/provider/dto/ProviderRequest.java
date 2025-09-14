@@ -12,6 +12,7 @@ public class ProviderRequest {
     @NotBlank(message = "Name is required")
     private String name;
 
+    @Size(max = 2000)
     private String description;
 
     @NotNull(message = "Category is required")

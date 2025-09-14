@@ -1,12 +1,16 @@
 package uz.navbatuz.backend.customer.controller;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import uz.navbatuz.backend.customer.dto.CustomerLocationRequest;
+import uz.navbatuz.backend.customer.dto.CustomerLocationResponse;
 import uz.navbatuz.backend.customer.model.Customer;
+import uz.navbatuz.backend.customer.service.CustomerLocationService;
 import uz.navbatuz.backend.customer.service.CustomerService;
 import uz.navbatuz.backend.provider.dto.ProviderResponse;
 import uz.navbatuz.backend.user.dto.UserDetailsDTO;
@@ -23,6 +27,7 @@ import java.util.UUID;
 @PreAuthorize("hasRole('CUSTOMER')")
 public class CustomerController {
     private final CustomerService customerService;
+    private final CustomerLocationService locationService;
 
     @GetMapping
     public ResponseEntity<List<UserDetailsDTO>> getAllCustomer() {
@@ -51,6 +56,27 @@ public class CustomerController {
     public ResponseEntity<Map<String, UUID>> me(Authentication authentication) {
         UUID id = customerService.requireCustomerIdByUsername(authentication.getName());
         return ResponseEntity.ok(Map.of("id", id));
+    }
+
+    @PutMapping("/location")
+    public ResponseEntity<CustomerLocationResponse> setMyLocation(
+            Authentication auth,
+            @Valid @RequestBody CustomerLocationRequest req
+    ) {
+        var res = locationService.upsertForMe(auth.getName(), req);
+        return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/location")
+    public ResponseEntity<CustomerLocationResponse> getMyLocation(Authentication auth) {
+        return ResponseEntity.ok(locationService.getForMe(auth.getName()));
+    }
+
+    // Optional admin/CSR read by id:
+    @PreAuthorize("hasAnyRole('ADMIN')")
+    @GetMapping("/{customerId}/location")
+    public ResponseEntity<CustomerLocationResponse> getLocationById(@PathVariable UUID customerId) {
+        return ResponseEntity.ok(locationService.getByCustomerId(customerId));
     }
 
 }

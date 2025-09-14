@@ -1,14 +1,9 @@
 package uz.navbatuz.backend.auth.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import lombok.Data;
+import jakarta.validation.constraints.*;
 
-@Data
-public class ResetPasswordRequest {
-    @NotBlank
-    private String email;
-    @NotBlank
-    private String code;         // 6-digit OTP
-    @NotBlank
-    private String newPassword;  // validate length client-side
-}
+public record ResetPasswordRequest(
+        @Email @NotBlank String email,
+        @Pattern(regexp = "^[0-9]{6}$", message = "Invalid code") String code,
+        @Size(min = 6, max = 128) String newPassword
+) {}

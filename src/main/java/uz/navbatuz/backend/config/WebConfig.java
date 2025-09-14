@@ -10,7 +10,6 @@ import java.nio.file.Paths;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
-    // This must match where your UploadService writes files.
     @Value("${app.upload.root:uploads}")
     private String uploadRoot;
 
