@@ -21,8 +21,8 @@ import java.util.UUID;
 @AllArgsConstructor
 @Builder
 @Table(
-        name = "appointments",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"worker_id", "date", "start_time"})
+        name = "appointments"
+//        uniqueConstraints = @UniqueConstraint(columnNames = {"worker_id", "date", "start_time"})
 )
 public class Appointment {
 

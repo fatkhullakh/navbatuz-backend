@@ -200,13 +200,48 @@ public class ProviderService {
 //                .orElseThrow(() -> new RuntimeException("Provider not  found"));
 //    }
 
-    public void deactivate(UUID id) {
-        log.info("Start deactivating provider with id: {}", id);
-        Provider provider = providerRepository.findById(id)
+//    public void deactivate(UUID id) {
+//        log.info("Start deactivating provider with id: {}", id);
+//        Provider provider = providerRepository.findById(id)
+//                .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+//        provider.setActive(false);
+//        providerRepository.save(provider);
+//        log.info("Successfully deactivated provider with id: {}", id);
+//    }
+
+    public void deactivate(UUID providerId, UUID currentUserId) {
+        log.info("Start deactivating provider with id: {} by user: {}", providerId, currentUserId);
+
+        // Find the provider
+        Provider provider = providerRepository.findById(providerId)
                 .orElseThrow(() -> new EntityNotFoundException("Provider not found"));
+
+        // Find the current user
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        // Authorization checks
+        boolean isAdmin = currentUser.getRole() != null && "ADMIN".equals(currentUser.getRole().name());
+        boolean isOwner = provider.getOwner() != null && provider.getOwner().getId().equals(currentUserId);
+        boolean isReceptionist = false;
+
+        // Check if user is a receptionist of this provider
+        if (currentUser.getRole() != null && "RECEPTIONIST".equals(currentUser.getRole().name())) {
+            isReceptionist = receptionistRepository.findByUserId(currentUserId)
+                    .map(receptionist -> receptionist.getProvider().getId().equals(providerId))
+                    .orElse(false);
+        }
+
+        if (!isAdmin && !isOwner && !isReceptionist) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You don't have permission to deactivate this provider");
+        }
+
+        // Perform the deactivation
         provider.setActive(false);
         providerRepository.save(provider);
-        log.info("Successfully deactivated provider with id: {}", id);
+
+        log.info("Successfully deactivated provider with id: {} by user: {}", providerId, currentUserId);
     }
 
 

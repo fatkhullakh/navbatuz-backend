@@ -30,7 +30,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .cors(Customizer.withDefaults())                 // << ENABLE CORS
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -38,7 +38,7 @@ public class SecurityConfig {
                                 "/api/auth/login", "/api/auth/register",
                                 "/api/auth/forgot-password", "/api/auth/reset-password",
                                 "/api/auth/public/**",
-                                "/public/**", "/p/**", "/s/**",          // <— ADD
+                                "/public/**", "/p/**", "/s/**",
                                 "/api/health", "/health",
                                 "/api/providers/public/**",
                                 "/api/services/public/**",
@@ -47,12 +47,15 @@ public class SecurityConfig {
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
-
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint((req, res, e) -> res.sendError(HttpServletResponse.SC_UNAUTHORIZED))
+                        .authenticationEntryPoint((req, res, e) -> {
+                            System.out.println("Auth entry point triggered for: " + req.getRequestURI()); // DEBUG
+                            res.sendError(HttpServletResponse.SC_UNAUTHORIZED);
+                        })
                         .accessDeniedHandler((req, res, e) -> res.sendError(HttpServletResponse.SC_FORBIDDEN))
                 )
+                // Make sure the filter is added BEFORE UsernamePasswordAuthenticationFilter
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

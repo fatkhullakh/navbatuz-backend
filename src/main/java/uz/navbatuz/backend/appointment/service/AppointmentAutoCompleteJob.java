@@ -9,7 +9,9 @@ import uz.navbatuz.backend.appointment.model.Appointment;
 import uz.navbatuz.backend.appointment.repository.AppointmentRepository;
 import uz.navbatuz.backend.common.AppointmentStatus;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.List;
 
 @Service
@@ -41,17 +43,17 @@ public class AppointmentAutoCompleteJob {
 
     @Transactional
     int processBatch(int batchSize) {
-        List<Appointment> batch = repo.pickOverdueForUpdate(ELIGIBLE, Instant.now(), batchSize);
+        // Convert current time to the application's timezone
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Tashkent")); // Adjust timezone as needed
+
+        List<Appointment> batch = repo.pickOverdueForUpdate(ELIGIBLE, now.toInstant(), batchSize);
         if (batch.isEmpty()) return 0;
 
-        Instant now = Instant.now();
         for (Appointment a : batch) {
-            a.setStatus(AppointmentStatus.valueOf("COMPLETED"));
-            // publish event to trigger review email/push, if you have such flow
-            // domainEvents.publish(new AppointmentCompletedEvent(a.getId()));
+            a.setStatus(AppointmentStatus.COMPLETED);
+            log.debug("Auto-completed appointment {}", a.getId());
         }
         repo.saveAll(batch);
         return batch.size();
     }
 }
-

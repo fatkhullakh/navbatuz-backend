@@ -1,5 +1,6 @@
 package uz.navbatuz.backend.provider.controller;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +45,7 @@ public class ProviderController {
         );
     }
 
+    @PermitAll
     @PostMapping("/public/register")
     public ResponseEntity<ProviderResponse> create(@RequestBody @Valid ProviderRequest request) {
         Provider p = providerService.create(request);
@@ -119,12 +121,18 @@ public class ProviderController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST')")
+    @PreAuthorize("hasAnyRole('OWNER', 'RECEPTIONIST', 'ADMIN')")
     @Transactional
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deactivate(@PathVariable UUID id) {
-        providerService.deactivate(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<Map<String, String>> deactivate(@PathVariable UUID id) {
+        UUID currentUserId = currentUserService.getCurrentUserId();
+        providerService.deactivate(id, currentUserId);
+
+        // Return a proper JSON response instead of no content
+        return ResponseEntity.ok(Map.of(
+                "message", "Provider deactivated successfully",
+                "providerId", id.toString()
+        ));
     }
 
     @GetMapping("/public/search")

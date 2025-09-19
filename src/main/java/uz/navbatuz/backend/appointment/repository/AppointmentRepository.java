@@ -27,19 +27,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, UUID> 
 
     List<Appointment> findByWorkerIdAndDateAndStatusInOrderByStartTime(UUID workerId, LocalDate date, Set<AppointmentStatus> statuses);
 
-    @Query(
-            value = """
-      SELECT * FROM appointment
-      WHERE status = ANY(:statuses)
-        AND end_at <= :now
-      FOR UPDATE SKIP LOCKED
-      LIMIT :limit
-    """,
-            nativeQuery = true
-    )
+    @Query(value = """
+        SELECT * FROM appointments 
+        WHERE status = ANY(:statuses)
+          AND (date + end_time) <= :cutoff
+        FOR UPDATE SKIP LOCKED
+        LIMIT :batchSize
+        """, nativeQuery = true)
     List<Appointment> pickOverdueForUpdate(
             @Param("statuses") String[] statuses,
-            @Param("now") Instant now,
-            @Param("limit") int limit
+            @Param("cutoff") Instant cutoff,
+            @Param("batchSize") int batchSize
     );
 }
